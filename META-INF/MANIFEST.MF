@@ -1,4 +1,4 @@
 Manifest-Version: 1.0
 Class-Path: scala-library.jar
-Main-Class: com.googlecode.pegsolitaire.PegSolitaireTUI
+Main-Class: com.googlecode.pegsolitaire.TUI
 

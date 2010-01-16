@@ -1,5 +1,6 @@
 /**
- * Peg Solitaire Solver  Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Peg Solitaire
+ * Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
@@ -16,25 +17,35 @@
 
 package com.googlecode.pegsolitaire
 
-object PegSolitaireMove extends Enumeration {
+object MoveDirections extends Enumeration {
 	val Horizontal = Value("horizontal")
 	val Vertical = Value("vertical")
 	val LeftDiagonal = Value("left diagonal \\")
 	val RightDiagonal = Value("right diagonal /")
 }
 
-class PegSolitaire(val fieldDescription: String, val moveDirections: Array[PegSolitaireMove.Value]) {
+object GameType extends Enumeration {
+	val English = Value("english")
+	val French = Value("french")
+	val Holes15 = Value("15holes")
+	val User = Value("user")
+}
 
-	val length = fieldDescription.length - fieldDescription.replaceAll("o","").length
+/**
+ * ToDo: autodetect all possible rotated and flipped gamefields
+ */
+class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value], val gameType: GameType.Value = GameType.User) {
+
+	val length = boardDescription.length - boardDescription.replaceAll("o","").length
 
 	require(length < 63, "Only 63 field elements are currently supported")
 
-	private val printMask = fieldDescription.replaceAll("\\.", " ").replaceAll("o", "P")
+	private val printMask = boardDescription.replaceAll("\\.", " ").replaceAll("o", "P")
 
 	protected val lookUpTable = new scala.collection.mutable.HashMap[(Int,Int), Int]
-	private val masks:(Array[Long], Array[Long], Array[Long]) =  {
 
-		val cleanString = fieldDescription.replaceAll(" ", "").replaceAll("\t", "").replaceAll("o", "1").replaceAll("\\.", "0").split("\n")
+	private val boardDescriptionArray: Array[Array[Boolean]] = {
+		val cleanString = boardDescription.replaceAll(" ", "").replaceAll("\t", "").replaceAll("o", "1").replaceAll("\\.", "0").split("\n")
 
 		require(cleanString.length > 1, "cleanString=" + cleanString)
 
@@ -43,14 +54,14 @@ class PegSolitaire(val fieldDescription: String, val moveDirections: Array[PegSo
 
 		require(lineLength > 1)
 
-		val fieldDescriptionArray = Array.fill[Boolean](cleanString.length, lineLength)(false)
+		val result = Array.fill[Boolean](cleanString.length, lineLength)(false)
 
 		var pos = length-1
 		var line = 0
 		for(s <- cleanString) {
 			require(lineLength == s.length)
 
-			val currentLine = fieldDescriptionArray(line)
+			val currentLine = result(line)
 
 			for(i <- 0 until lineLength) {
 				currentLine(i) = (s(i) == '1')
@@ -63,6 +74,10 @@ class PegSolitaire(val fieldDescription: String, val moveDirections: Array[PegSo
 			line += 1
 		}
 
+		result
+	}
+
+	private val masks:(Array[Long], Array[Long], Array[Long]) =  {
 		val movemask = new java.util.LinkedList[Long]()
 		val checkmask1 = new java.util.LinkedList[Long]()
 		val checkmask2 = new java.util.LinkedList[Long]()
@@ -73,36 +88,36 @@ class PegSolitaire(val fieldDescription: String, val moveDirections: Array[PegSo
 			checkmask2 add ((1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
 		}
 
-		for(y <- 0 until fieldDescriptionArray.length) {
-			for(x <- 0 until fieldDescriptionArray(0).length) {
-				val current = fieldDescriptionArray(y)(x)
+		for(y <- 0 until boardDescriptionArray.length) {
+			for(x <- 0 until boardDescriptionArray(0).length) {
+				val current = boardDescriptionArray(y)(x)
 
 				moveDirections foreach {
 					_ match {
-						case PegSolitaireMove.Horizontal =>
-							val right1 = if(x+1 < fieldDescriptionArray(0).length) fieldDescriptionArray(y)(x+1) else false
-							val right2 = if(x+2 < fieldDescriptionArray(0).length) fieldDescriptionArray(y)(x+2) else false
+						case MoveDirections.Horizontal =>
+							val right1 = if(x+1 < boardDescriptionArray(0).length) boardDescriptionArray(y)(x+1) else false
+							val right2 = if(x+2 < boardDescriptionArray(0).length) boardDescriptionArray(y)(x+2) else false
 
 							if(current && right1 && right2)
 								addMove((x,y), (x+1,y), (x+2,y))
 
-						case PegSolitaireMove.Vertical =>
-							val down1 = if(y+1 < fieldDescriptionArray.length) fieldDescriptionArray(y+1)(x) else false
-							val down2 = if(y+2 < fieldDescriptionArray.length) fieldDescriptionArray(y+2)(x) else false
+						case MoveDirections.Vertical =>
+							val down1 = if(y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x) else false
+							val down2 = if(y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x) else false
 
 							if(current && down1 && down2)
 								addMove((x,y), (x,y+1), (x,y+2))
 
-						case PegSolitaireMove.LeftDiagonal =>
-							val leftDiagonal1 = if(x+1 < fieldDescriptionArray(0).length && y+1 < fieldDescriptionArray.length) fieldDescriptionArray(y+1)(x+1) else false
-							val leftDiagonal2 = if(x+2 < fieldDescriptionArray(0).length && y+2 < fieldDescriptionArray.length) fieldDescriptionArray(y+2)(x+2) else false
+						case MoveDirections.LeftDiagonal =>
+							val leftDiagonal1 = if(x+1 < boardDescriptionArray(0).length && y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x+1) else false
+							val leftDiagonal2 = if(x+2 < boardDescriptionArray(0).length && y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x+2) else false
 
 						if(current && leftDiagonal1 && leftDiagonal2)
 								addMove((x,y), (x+1,y+1), (x+2,y+2))
 
-						case PegSolitaireMove.RightDiagonal =>
-							val rightDiagonal1 = if(x-1 >= 0 && y+1 < fieldDescriptionArray.length) fieldDescriptionArray(y+1)(x-1) else false
-							val rightDiagonal2 = if(x-2 >= 0 && y+2 < fieldDescriptionArray.length) fieldDescriptionArray(y+2)(x-2) else false
+						case MoveDirections.RightDiagonal =>
+							val rightDiagonal1 = if(x-1 >= 0 && y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x-1) else false
+							val rightDiagonal2 = if(x-2 >= 0 && y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x-2) else false
 
 							if(current && rightDiagonal1 && rightDiagonal2)
 								addMove((x,y), (x-1,y+1), (x-2,y+2))
@@ -240,14 +255,14 @@ class PegSolitaire(val fieldDescription: String, val moveDirections: Array[PegSo
 	}
 }
 
-object PegSolitaireEnglish extends PegSolitaire(
+object BoardEnglish extends Board(
 """. . o o o . .
 . . o o o . .
 o o o o o o o
 o o o o o o o
 o o o o o o o
 . . o o o . .
-. . o o o . .""", Array(PegSolitaireMove.Horizontal, PegSolitaireMove.Vertical)) {
+. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.English) {
 
 	override def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean = {
 		val n90  = rotate90(field)
@@ -432,20 +447,19 @@ o o o o o o o
 /**
  * ToDo implement rotate
  */
-object PegSolitaireFrench extends PegSolitaire(
+object BoardFrench extends Board(
 """. . o o o . .
 . o o o o o .
 o o o o o o o
 o o o o o o o
 o o o o o o o
 . o o o o o .
-. . o o o . .""", Array(PegSolitaireMove.Horizontal, PegSolitaireMove.Vertical))
+. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.French)
 
 
-object PegSolitaire15Holes extends PegSolitaire(
+object Board15Holes extends Board (
 """o . . . .
 o o . . .
 o o o . .
 o o o o .
-o o o o o""", Array(PegSolitaireMove.Horizontal, PegSolitaireMove.Vertical, PegSolitaireMove.LeftDiagonal))
-
+o o o o o""", Array(MoveDirections.Horizontal, MoveDirections.Vertical, MoveDirections.LeftDiagonal), GameType. Holes15)
