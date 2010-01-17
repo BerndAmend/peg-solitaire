@@ -55,8 +55,8 @@ object Solver {
 
 			// read and create game
 			boardType match {
-				case GameType.English => output = new Solver(BoardEnglish)
-				case GameType.French => output = new Solver(BoardFrench)
+				case GameType.English => output = new Solver(EnglishBoard)
+				case GameType.European => output = new Solver(EuropeanBoard)
 				case GameType.Holes15 => output = new Solver(Board15Holes)
 				case GameType.User =>
 					val possibleMoves = new Array[MoveDirections.Value](in.readInt)
@@ -73,9 +73,6 @@ object Solver {
 
 				case _ => throw new Exception("unsupported boardType")
 			}
-
-			for(i <- 0 until output.game.length)
-				output.solution(i) = null
 
 			var run = true
 			while (run) {
@@ -228,6 +225,9 @@ class Solver(val game: Board) {
 
 	protected def getCompleteList(solutionNumber: Int): List[Long] = game.getCompleteList(solution(solutionNumber).toList)
 
+	/**
+	 * @return a list of all possible start-fields
+	 */
 	def getStart(): List[Long] = {
 		var start = 0
 		while(solution(start) == null || solution(start).size == 0) {
@@ -240,6 +240,9 @@ class Solver(val game: Board) {
 		getCompleteList(start)
 	}
 
+	/**
+	 * @return a list of all possible end-fields
+	 */
 	def getEnd(): List[Long] = {
 		var end = game.length-1
 		while(solution(end) == null || solution(end).size != 0) {
@@ -252,6 +255,9 @@ class Solver(val game: Board) {
 		getCompleteList(end)
 	}
 
+	/**
+	 * @return all follower for a provided field
+	 */
 	def getFollower(field: Long): List[Long] = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos + 1 >= game.length)
@@ -277,15 +283,8 @@ class Solver(val game: Board) {
 	}
 
 	/**
-	 * load a solution from file
-	 *
-	 * Description of the used file
-	 * <version: Int>
-	 * <type: Int>
-	 * <Possible Moves count: Int><Possible Moves: repeated Int> # only available in user mode
-	 * <boardDescription length><boardDescription: repeated Char> # only available in user mode
-	 * <number of bits set:Int><number of values: Int><values: repated Long>: repeated until eof
-	 */
+	 * save solution to a file
+     */
 	def save(filename: String) {
 		val out = new java.io.DataOutputStream(
 					new java.util.zip.GZIPOutputStream(
@@ -322,6 +321,7 @@ class Solver(val game: Board) {
 	}
 
 	/**
+	 * count how many different games are playable
 	 * ToDo: use getStart and getEnd to allow incomplete games
 	 */
 	def countPossibleGames(): BigDecimal = {

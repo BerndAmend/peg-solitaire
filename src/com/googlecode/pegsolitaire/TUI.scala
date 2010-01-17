@@ -27,28 +27,27 @@ object TUI {
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
 		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
 
-
-		var solitaire: Solver = null
-
 		if(args.length == 0) {
-			println("usage [[-board english|french|15holes|user]|[-load <filename>] [-single|-full] [-save <filename>] [-browser] [-count] [additional options]")
-			println("  -board <selection>   select a solitaire board\n" +
-					"                         english: standard english\n" +
+			println("usage [[-board user|english|15holes|euro]|[-load <filename>] [-single|-full] [-save <filename>] [-browser] [-count] [additional options]\n" +
+					"  -board <selection>   select a solitaire board\n" +
 					"                         user: create your own board!\n" +
+					"                         english: standard english\n" +
 					"                         15holes: simple test board\n" +
-					"                         french: standard french")
-			println("  -full                calculate all solutions for all possible start fields")
-			println("  -single              limit startfield to 1 (use only if -full takes too long)")
-			println("  -load <filename>     load a saved field from a file (gz compressed)")
-			println("  -save <filename>     since calculating all solutions for complicated fields\n" +
-					"                       takes a while, the results can be saved (gz compressed)")
-			println("  -browser             interactive text based interface to explore all possible\n" +
-					"                       solutions")
-			println("  -count               count the number of ways to a solution (this may take a while)")
-			println("  -color               enable colored text output")
+					"                         euro: standard european (not memory optimized)" +
+					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
+					"  -full                calculate all solutions for all possible start fields\n" +
+					"  -single              limit startfield to 1 (use only if -full takes too long)\n" +
+					"  -save <filename>     since calculating all solutions for complicated fields\n" +
+					"                       takes a while, the results can be saved (gz compressed)\n" +
+					"  -browser             interactive text based interface to explore all possible solutions\n" +
+					"  -count               count the number of ways to a solution (this may take a while)\n" +
+					"  -color               enable colored text output")
 			return
 		}
 
+		/*
+		 * parse command line arguments
+		 */
 		var arg_single = false
 		var arg_full = false
 		var arg_load = ""
@@ -125,10 +124,12 @@ object TUI {
 			return
 		}
 
+		var solitaire: Solver = null
+
 		if(arg_board) {
 			var solitaireType = selectedGame match {
-				case GameType.English => BoardEnglish
-				case GameType.French => BoardFrench
+				case GameType.English => EnglishBoard
+				case GameType.European => EuropeanBoard
 				case GameType.Holes15 => Board15Holes
 				case GameType.User =>
 					println("Examples:")
@@ -214,6 +215,11 @@ object TUI {
 		println("Bye, bye")
 	}
 
+	/**
+	 * Simple console based game-field selection
+	 *
+	 * @return selected game-field
+	 */
 	def selectField(game: Board, choices: List[Long]): Long = {
 		val sb = new StringBuilder
 		var tmp = ""

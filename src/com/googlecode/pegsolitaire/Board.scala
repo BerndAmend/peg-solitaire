@@ -26,13 +26,15 @@ object MoveDirections extends Enumeration {
 
 object GameType extends Enumeration {
 	val English = Value("english")
-	val French = Value("french")
+	val European = Value("euro")
 	val Holes15 = Value("15holes")
 	val User = Value("user")
 }
 
 /**
- * ToDo: autodetect all possible rotated and flipped gamefields
+ * ToDo: auto-detect all possible rotated and flipped game-fields
+ *
+ * @author Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  */
 class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value], val gameType: GameType.Value = GameType.User) {
 
@@ -42,8 +44,17 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 
 	private val printMask = boardDescription.replaceAll("\\.", " ").replaceAll("o", "P")
 
+	/**
+	 * Describes how (x,y)-positions (map-key) inside the boardDescription correspond
+	 * to the bit position used to represent the board
+	 *
+	 * The lookUpTable is calculated inside the boardDescriptionArray body
+	 */
 	protected val lookUpTable = new scala.collection.mutable.HashMap[(Int,Int), Int]
 
+	/**
+	 * into a Boolean array converted representation of the provided boardDescription 
+	 */
 	private val boardDescriptionArray: Array[Array[Boolean]] = {
 		val cleanString = boardDescription.replaceAll(" ", "").replaceAll("\t", "").replaceAll("o", "1").replaceAll("\\.", "0").split("\n")
 
@@ -77,6 +88,12 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		result
 	}
 
+	/**
+	 * calculate the 3 required bit masks, to detect if a move is possible and to execute him
+	 * (m,_,_) => ...111... (movemask)
+	 * (_,m,_) => ...110... (checkmask1)
+	 * (_,_,m) => ...011... (checkmask2)
+	 */
 	private val masks:(Array[Long], Array[Long], Array[Long]) =  {
 		val movemask = new java.util.LinkedList[Long]()
 		val checkmask1 = new java.util.LinkedList[Long]()
@@ -157,11 +174,11 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		(movemaskArray, checkmaskArray1, checkmaskArray2)
 	}
 
-	val movemask = masks._1
-	val checkmask1 = masks._2
-	val checkmask2 = masks._3
+	val movemask = masks._1     // ...111... required to mask bits effected by a move and execute the move
+	val checkmask1 = masks._2   // ...110... required to check if a move is possible
+	val checkmask2 = masks._3   // ...011... required to check if a move is possible
 
-	val possibleStartFields = {
+	lazy val possibleStartFields = {
 		val hashSet = new LongHashSet
 
 		val base = (1L << length)-1L
@@ -174,6 +191,9 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		hashSet.toList
 	}
 
+	/**
+	 * creates a human-readable version of a field, the output as described by the boardDescription
+	 */
 	def toString(field: Long): String = {
 		var output = printMask
 
@@ -186,6 +206,9 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		output
 	}
 
+	/**
+	 * converts a human-readable version into the internal bit representation 
+	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
 	/**
@@ -206,6 +229,8 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	}
 
 	/**
+	 * Add a field into the hashSet, if isInLongHashSet returns false
+	 *
 	 * @return true if the field was really added
 	 */
 	final def addToLongHashSet(field: Long, hashSet: LongHashSet) = {
@@ -216,6 +241,9 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 			false
 	}
 
+	/**
+	 * return true if field has a follower in the solutions HashSet
+	 */
 	final def hasFollower(field: Long, solutions: LongHashSet): Boolean = {
 		var i = 0
 		while (i < movemask.size) {
@@ -230,10 +258,21 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		false
 	}
 
+	/**
+	 * check if a field is already in the hashSet
+	 * to reduce memory constraints derived classes should
+	 * return true if a rotation/flipped version already exists in the hashSet
+	 */
 	def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean = hashSet.contains(field)
 
+	/**
+	 * @return all fields which are equal the provided field 
+	 */
 	def getEquivalentFields(field: Long) = List(field)
 
+	/**
+	 * @return a complete list with all equivalent fields for the fields HashSet
+	 */
 	def getCompleteList(fields: LongHashSet): List[Long] = {
 		val output = new LongHashSet
 
@@ -244,6 +283,9 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		output.toList
 	}
 
+	/**
+	 * @return a complete list with all equivalent fields for the fields HashSet
+	 */
 	def getCompleteList(fields: Iterable[Long]): List[Long] = {
 		val output = new LongHashSet
 
@@ -255,7 +297,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	}
 }
 
-object BoardEnglish extends Board(
+object EnglishBoard extends Board(
 """. . o o o . .
 . . o o o . .
 o o o o o o o
@@ -447,15 +489,14 @@ o o o o o o o
 /**
  * ToDo implement rotate
  */
-object BoardFrench extends Board(
+object EuropeanBoard extends Board(
 """. . o o o . .
 . o o o o o .
 o o o o o o o
 o o o o o o o
 o o o o o o o
 . o o o o o .
-. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.French)
-
+. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.European)
 
 object Board15Holes extends Board (
 """o . . . .
