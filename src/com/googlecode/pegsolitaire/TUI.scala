@@ -21,7 +21,7 @@ import Helper._
 
 object TUI {
 	def main(args: Array[String]) {
-		println("Peg Solitaire 0.2dev\n" +
+		println("Peg Solitaire 0.2\n" +
 				"  Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 		        "  This program is free software: you can redistribute it and/or modify\n" +
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
@@ -197,7 +197,8 @@ object TUI {
 		for (i <- 0 until solitaire.game.length) {
 			if(solitaire.solution(i) != null) {
 				val num = solitaire.solution(i).size
-				println("  - removed pegs = " + i + "  possible fields = " + num + " (maybe without equivalent fields)")
+				println("  - removed pegs = " + i + "  possible fields = " + num +
+				(if(selectedGame == GameType.English) " (without equivalent fields)" else ""));
 				count += num
 			}
 		}
