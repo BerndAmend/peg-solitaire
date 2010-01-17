@@ -33,7 +33,7 @@ object TUI {
 					"                         user: create your own board!\n" +
 					"                         english: standard english\n" +
 					"                         15holes: simple test board\n" +
-					"                         euro: standard european (not memory optimized)" +
+					"                         euro: standard european (not optimized)\n" +
 					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
 					"  -full                calculate all solutions for all possible start fields\n" +
 					"  -single              limit startfield to 1 (use only if -full takes too long)\n" +
