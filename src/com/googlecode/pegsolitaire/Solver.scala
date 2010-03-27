@@ -17,6 +17,8 @@
 
 package com.googlecode.pegsolitaire
 import Helper._
+import scala.actors.Actor
+import scala.actors.Actor._
 
 object Solver {
 
@@ -101,7 +103,7 @@ object Solver {
 						if((output.game.length-java.lang.Long.bitCount(n)) == i) {
 							newLongHashSet += n
 						} else {
-							printError("error: ignore invalid entry (" + n + ")")
+							printlnError("error: ignore invalid entry (" + n + ")")
 						}
 							pos += 1
 					}
@@ -117,6 +119,11 @@ object Solver {
 }
 
 class Solver(val game: Board) {
+
+	val calculateForward = new Processing
+	val calculateBackward = new Processing
+	val cleanForward = new Processing
+	val cleanBackward = new Processing
 
 	/**
 	 *  solution(0) is unused
@@ -167,15 +174,26 @@ class Solver(val game: Board) {
 				}
 			}
 
-			printlnColoredText(", found " + current.size + " fields", Color.green)
-
-			val newprevioussize = solution(sol - 1).size
+			if(Helper.enableDebug) {
+				printColoredText(", found " + current.size + " fields", Color.green)
+				printlnDebug(" (HashSet collisions=" + current.collisions + ")")
+			} else {
+				printlnColoredText(", found " + current.size + " fields", Color.green)
+			}
 
 			solution(sol-1).shrink
 
+			val newprevioussize = solution(sol - 1).size
+
 			// Backpropagation
 			def backpropagation() {
-				println("  clean field list with " + (sol - 1) + " removed pegs: left = " + newprevioussize + "  deleted = " + (oldprevioussize - newprevioussize))
+				if(Helper.enableDebug) {
+					print("  clean field list with " + (sol - 1) + " removed pegs: deleted = " + (oldprevioussize - newprevioussize) + "  left = " + newprevioussize)
+					printlnDebug(" (HashSet collisions=" + solution(sol - 1).collisions + ")")
+				} else {
+					println("  clean field list with " + (sol - 1) + " removed pegs: deleted = " + (oldprevioussize - newprevioussize) + "  left = " + newprevioussize)
+				}
+
 				deadends(sol-1) += (oldprevioussize - newprevioussize) // update dead end counter
 				for (i <- (sol - 1).to(start+1, -1)) {
 					var changed = false
@@ -193,8 +211,15 @@ class Solver(val game: Board) {
 					val newpresize = solution(i - 1).size
 
 					if (changed) {
-						println("  clean field list with " + (i - 1) + " removed pegs: left = " + newpresize + "  deleted = " + (oldpresize - newpresize))
+						if(Helper.enableDebug) {
+							print("  clean field list with " + (i - 1) + " removed pegs: deleted = " + (oldpresize - newpresize) + "  left = " + newpresize)
+							printlnDebug(" (HashSet collisions=" + solution(i - 1).collisions + ")")
+						} else {
+							println("  clean field list with " + (i - 1) + " removed pegs: deleted = " + (oldpresize - newpresize) + "  left = " + newpresize)
+						}
+
 						deadends(i-1) += (oldpresize - newpresize) // update dead end counter
+
 						solution(i-1).shrink
 					} else {
 						return
@@ -265,21 +290,22 @@ class Solver(val game: Board) {
 		val next = solution(fieldPos + 1)
 		if(next == null)
 			return List[Long]()
-		var result = new LongHashSet
-		var i = 0
-		while (i < game.movemask.size) {
-			var tmp = field & game.movemask(i)
-			if (tmp == game.checkmask1(i) || tmp == game.checkmask2(i)) {
-				val n = field ^ game.movemask(i)
 
-				if (game.isInLongHashSet(n, next))
-					result += n
-			}
+		game.getFollower(field, next).toList
+	}
 
-			i += 1
-		}
+	/**
+	 * @return all follower for a provided field
+	 */
+	def getPredecessor(field: Long): List[Long] = {
+		val fieldPos = game.length - java.lang.Long.bitCount(field)
+		if (fieldPos - 1 <= 0)
+			return List[Long]()
+		val previous = solution(fieldPos - 1)
+		if(previous == null)
+			return List[Long]()
 
-		result.toList
+		game.getPredecessor(field, previous).toList
 	}
 
 	/**
@@ -360,6 +386,35 @@ class Solver(val game: Board) {
 			count += s._2
 
 		count
+	}
+
+	case class CalculateForward(num: Int)
+	case class CalculateBackward(num: Int)
+	case class CleanForward(num: Int)
+	case class CleanBackward(num: Int)
+
+	class Processing extends Actor {
+
+		def act() = {
+			loop {
+				react {
+					case v: CalculateForward => {
+
+					}
+					case v: CalculateBackward => {
+						// ToDo
+					}
+					case v: CleanForward => { // message is send by CalculateBackward
+						// ToDo
+					}
+					case v: CleanBackward => { // message is send by CalculateForward
+						//
+					}
+				}
+			}
+		}
+
+		start
 	}
 
 }

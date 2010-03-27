@@ -1,5 +1,6 @@
 /**
- * Peg Solitaire Solver  Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Peg Solitaire
+ * Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
@@ -25,7 +26,7 @@ object Time {
 			val diff = System.currentTimeMillis - start
 			val seconds = diff / 1000.0
 			val minutes = seconds / 60.0
-			println(name + " completed, time taken: " + diff + " ms = " + seconds + " = " + minutes + " min")
+			println(name + " completed, time taken: " + diff + " ms = " + seconds + " sec = " + minutes + " min")
 		}
 	}
 }

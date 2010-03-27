@@ -41,7 +41,8 @@ object TUI {
 					"                       takes a while, the results can be saved (gz compressed)\n" +
 					"  -browser             interactive text based interface to explore all possible solutions\n" +
 					"  -count               count the number of ways to a solution (this may take a while)\n" +
-					"  -color               enable colored text output")
+					"  -color               enable colored text output\n" +
+					"  -debug               enable debug output")
 			return
 		}
 
@@ -67,7 +68,7 @@ object TUI {
 				case "-load" =>
 					i += 1
 					if(i == args.length) {
-						printError("error: -load requires an additional parameter")
+						printlnError("error: -load requires an additional parameter")
 						return
 					} else
 						arg_load = args(i)
@@ -75,7 +76,7 @@ object TUI {
 				case "-save" =>
 					 i += 1
 					if(i == args.length) {
-						printError("error: -save requires an additional parameter")
+						printlnError("error: -save requires an additional parameter")
 						return
 					} else
 						arg_save = args(i)
@@ -83,44 +84,45 @@ object TUI {
 				case "-board" =>
 					i += 1
 					if(i == args.length) {
-						printError("error: -board requires an additional parameter")
+						printlnError("error: -board requires an additional parameter")
 						return
 					}
 					try {
 						selectedGame = GameType.withName(args(i))
 					} catch {
-						case _ => printError("error: unknown game type")
+						case _ => printlnError("error: unknown game type")
 					}
 					arg_board = true
 				case "-color" => Helper.enableColor = true
-				case s => printError("error: unknown parameter " + s + " exit")
+				case "-debug" => Helper.enableDebug = true
+				case s => printlnError("error: unknown parameter " + s + " exit")
 						return
 			}
 			i += 1
 		}
 
 		if(!arg_board && arg_load.isEmpty) {
-			printError("error: either -load or -board has to be specified")
+			printlnError("error: either -load or -board has to be specified")
 			return
 		}
 
 		if(arg_board && !arg_load.isEmpty) {
-			printError("error: -load and -board are mutually exclusive")
+			printlnError("error: -load and -board are mutually exclusive")
 			return
 		}
 
 		if(arg_full && arg_single) {
-			printError("error: -single and -full are mutually exclusive")
+			printlnError("error: -single and -full are mutually exclusive")
 			return
 		}
 
 		if(arg_load.isEmpty && !arg_full && !arg_single) {
-			printError("error: either -single or -full has to be selected")
+			printlnError("error: either -single or -full has to be selected")
 			return
 		}
 
 		if(arg_save.isEmpty && !arg_browse) {
-			printError("error: either -save or -browser has to be selected")
+			printlnError("error: either -save or -browser has to be selected")
 			return
 		}
 
@@ -156,7 +158,7 @@ object TUI {
 					}
 
 					if(moveDirection.isEmpty) {
-						printError("error: no move directions selected, exit")
+						printlnError("error: no move directions selected, exit")
 						return
 					}
 
@@ -164,7 +166,7 @@ object TUI {
 					try {
 						sol = new Board(sb.toString, moveDirection.toArray[MoveDirections.Value])
 					} catch {
-						case _ => printError("error: the entered field is invalid, exit")
+						case _ => printlnError("error: the entered field is invalid, exit")
 						return
 					}
 				println("Press enter to start solving. This may take a while.")
@@ -181,14 +183,14 @@ object TUI {
 		} else if(!arg_load.isEmpty) {
 			Time("Load")(solitaire = Solver.fromFile(arg_load))
 		} else {
-			printError("error: neither -board nor -load is specified, abort")
+			printlnError("error: neither -board nor -load is specified, abort")
 			return
 		}
 
 		try {
 			solitaire.getStart
 		} catch {
-			case _ => printError("error: There are no solutions, exit")
+			case _ => printlnError("error: There are no solutions, exit")
 			return
 		}
 
@@ -248,7 +250,7 @@ object TUI {
 				case _ => input = -1
 			}
 			if (input < 0 || input >= choices.length) {
-				printError("error: invalid input, please try again")
+				printlnError("error: invalid input, please try again")
 			}
 		}
 

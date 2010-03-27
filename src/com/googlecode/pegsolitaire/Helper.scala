@@ -1,5 +1,6 @@
 /**
- * Peg Solitaire Solver  Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Peg Solitaire
+ * Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
@@ -18,6 +19,7 @@ package com.googlecode.pegsolitaire
 
 object Helper {
 	var enableColor = false
+	var enableDebug = false
 
 	object Color extends Enumeration {
 		val red = Value(Console.RED)
@@ -39,7 +41,11 @@ object Helper {
 			println(msg)
 	}
 
-	def printError(msg: String) = printlnColoredText(msg, Color.red)
+	def printError(msg: String) = printColoredText(msg, Color.red)
+	def printlnError(msg: String) = printlnColoredText(msg, Color.red)
+
+	def printDebug(msg: String) = if(enableDebug) printColoredText(msg, Color.blue)
+	def printlnDebug(msg: String) = if(enableDebug) printlnColoredText(msg, Color.blue)
 
 	/**
 	 * very bad implementation
@@ -82,7 +88,7 @@ object Helper {
 				case "yes" => return true
 				case "n" => return false
 				case "no" => return false
-				case _ => printError("error: invalid input, please try again")
+				case _ => printlnError("error: invalid input, please try again")
 			}
 		}
 		false

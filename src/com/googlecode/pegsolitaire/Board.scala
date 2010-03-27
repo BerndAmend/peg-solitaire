@@ -211,14 +211,11 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
-	/**
-	 * @return true : follower was found
-	 */
-	final def addFollower(field: Long, solutions: LongHashSet): Boolean = {
+	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
 		var hasFollower = false
 		var i = 0
 		while (i < movemask.size) {
-			var tmp = field & movemask(i)
+			var tmp = checkfield & movemask(i)
 			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
 				addToLongHashSet(field ^ movemask(i), solutions)
 				hasFollower = true
@@ -227,6 +224,16 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		}
 		hasFollower
 	}
+
+	/**
+	 * @return true : follower was found
+	 */
+	final def addFollower(field: Long, solutions: LongHashSet): Boolean = addRelatedFields(field, field, solutions)
+
+	/**
+	 * @return true : predecessor was found
+	 */
+	final def addPredecessor(field: Long, solutions: LongHashSet): Boolean = addRelatedFields(~field, field, solutions)
 
 	/**
 	 * Add a field into the hashSet, if isInLongHashSet returns false
@@ -244,10 +251,10 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	/**
 	 * return true if field has a follower in the solutions HashSet
 	 */
-	final def hasFollower(field: Long, solutions: LongHashSet): Boolean = {
+	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
 		var i = 0
 		while (i < movemask.size) {
-			var tmp = field & movemask(i)
+			var tmp = checkfield & movemask(i)
 			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
 				if (isInLongHashSet(field ^ movemask(i), solutions))
 					return true
@@ -258,12 +265,41 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		false
 	}
 
+	final def hasFollower(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(field, field, solutions)
+
+	final def hasPredecessor(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(~field, field, solutions)
+
+	/**
+	 * @return true if field has a follower in the solutions HashSet
+	 */
+	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
+		var result = new LongHashSet
+		var i = 0
+		while (i < movemask.size) {
+			var tmp = checkfield & movemask(i)
+			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
+				val n = field ^ movemask(i)
+
+				if (isInLongHashSet(n, searchSet))
+					result += n
+			}
+
+			i += 1
+		}
+
+		result
+	}
+
+	final def getFollower(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(field, field, searchSet)
+
+	final def getPredecessor(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(~field, field, searchSet)
+
 	/**
 	 * check if a field is already in the hashSet
 	 * to reduce memory constraints derived classes should
-	 * return true if a rotation/flipped version already exists in the hashSet
+	 * @return true if a rotation/flipped version already exists in the hashSet
 	 */
-	def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean = hashSet.contains(field)
+	def isInLongHashSet(field: Long, hashSet: LongHashSet) = hashSet.contains(field)
 
 	/**
 	 * @return all fields which are equal the provided field 

@@ -56,7 +56,7 @@ final class LongHashSet {
 
 	class HashSetIterator {
 		private var index = 0
-		private var last = -1
+		private[LongHashSet] var last = -1
 
 		advanceToItem()
 
@@ -367,5 +367,17 @@ final class LongHashSet {
 
 		r
 	}
-}
 
+	def collisions = {
+		val iter = iterator
+		var colCount = 0
+		while (iter.hasNext) {
+			val v = iter.next
+			if(getIndex(v) != iter.last)
+				colCount += 1
+		}
+
+		colCount
+	}
+
+}
