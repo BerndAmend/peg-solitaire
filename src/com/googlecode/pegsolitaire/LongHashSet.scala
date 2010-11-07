@@ -20,6 +20,7 @@
 
 package com.googlecode.pegsolitaire
 
+import Helper._
 import java.util.{Collection, Iterator, NoSuchElementException}
 
 /**
@@ -117,7 +118,7 @@ final class LongHashSet {
 
 	def addAll(c: Iterable[Long]) = {
 		ensureSizeFor(_size + c.size)
-		for(e <- c)
+		for (e <- c)
 			add(e)
 	}
 
@@ -140,8 +141,8 @@ final class LongHashSet {
 	}
 
 	/**
-	 * Works just like   { @link # addAll ( Collection ) }, but for arrays. Used to avoid
-	 * having to synthesize a collection in   { @link Sets }.
+	 * Works just like    { @link # addAll ( Collection ) }, but for arrays. Used to avoid
+	 * having to synthesize a collection in    { @link Sets }.
 	 */
 	def addAll(elements: Array[Long]) {
 		ensureSizeFor(_size + elements.length)
@@ -173,7 +174,7 @@ final class LongHashSet {
 			newCapacity <<= 1
 		// shrink only if required
 
-		if(table.length <= newCapacity)
+		if (table.length <= newCapacity)
 			return
 
 		val newHashSet = new LongHashSet(this)
@@ -361,23 +362,49 @@ final class LongHashSet {
 
 		val iter = iterator
 
-		while(iter.hasNext) {
+		while (iter.hasNext) {
 			r add iter.next
 		}
 
 		r
 	}
 
-	def collisions = {
+	/**
+	 * @return the search deep required to access elements (average, max, oneAccessPercent)
+	 */
+	def depth: (Double, Int, Double) = {
+
+		var averageValue = 0.0
+		var maxValue = 0
+		var oneAccessElements = 0
+
 		val iter = iterator
-		var colCount = 0
+		val tableSize = table.size
 		while (iter.hasNext) {
 			val v = iter.next
-			if(getIndex(v) != iter.last)
-				colCount += 1
+			val index = getIndex(v); // where the element should be
+			var d = 1
+			if (index == iter.last)
+				oneAccessElements += 1
+			else if (index < iter.last)
+				d += iter.last - index
+			else
+				d += iter.last + (tableSize - index)
+
+			maxValue = math.max(maxValue, d)
+			averageValue += d
 		}
 
-		colCount
+		averageValue /= size.toDouble
+
+		(averageValue, maxValue, oneAccessElements.toDouble / size.toDouble)
+	}
+
+	def printDepth() {
+		if (enableDebug) {
+			val accessDepth = depth
+			printlnlnDebug(" (HashSet accessDepth average=" + accessDepth._1 + " max=" + accessDepth._2 + " 1 access required=" + accessDepth._3 + ")")
+		}
 	}
 
 }
