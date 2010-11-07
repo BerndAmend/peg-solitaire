@@ -32,6 +32,7 @@ object Helper {
 			print(color + msg + Console.RESET)
 		else
 			print(msg)
+		Console.flush
 	}
 	
 	def printlnColoredText(msg: String, color: Color.Value) = {
@@ -48,6 +49,11 @@ object Helper {
 	def printlnDebug(msg: String) = if(enableDebug) printlnColoredText(msg, Color.blue)
 
 	/**
+	 * debug that always prints a line feed
+	 */
+	def printlnlnDebug(msg: String) = if(enableDebug) printlnColoredText(msg, Color.blue) else println()
+
+	/**
 	 * very bad implementation
 	 */
 	def mixStrings(str1: String, str2: String, seperator: String, str2label: String) = {
@@ -57,7 +63,7 @@ object Helper {
 
 		val ss1length = ss1.length
 		val ss2length = ss2.length + 1
-		val maxlength = Math.max(ss1length, ss2length)
+		val maxlength = scala.math.max(ss1length, ss2length)
 
 		var i = 0
 		while(i<maxlength) {
