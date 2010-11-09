@@ -1,5 +1,5 @@
 /**
- * Peg Solitaire
+ *  Peg Solitaire
  * Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,7 @@
 
 package com.googlecode.pegsolitaire
 import Helper._
-import scala.actors.Actor
-import scala.actors.Actor._
+import scala.concurrent.ops._
 
 object Solver {
 
@@ -120,20 +119,18 @@ object Solver {
 
 class Solver(val game: Board) {
 
-	val calculateForward = new Processing
-	val calculateBackward = new Processing
-	val cleanForward = new Processing
-	val cleanBackward = new Processing
-
 	/**
 	 *  solution(0) is unused
 	 */
 	val solution = new Array[LongHashSet](game.length)
 
-	def this(game: Board, startFields: Iterable[Long]) {
-		this(game)
+	/**
+	 * used to count in the ctor the dead ends
+	 */
+	private val deadends = Array.fill[BigDecimal](game.length)(BigDecimal(0))
 
-		val deadends = Array.fill[BigDecimal](game.length)(BigDecimal(0))
+	def this(game: Board, startFields: Iterable[Long], reduceMemory: Boolean = false, parallelProcessing: Boolean = false) {
+		this(game)
 
 		for(e <- startFields) {
 			val bc = game.length - java.lang.Long.bitCount(e)
@@ -146,90 +143,23 @@ class Solver(val game: Board) {
 			solution(bc) add e
 		}
 
-		// search first non free game field
-		var start = 0
-		while(solution(start) == null) {
-			start += 1
-
-			if(start == game.length)
-				throw new Exception("no set field found")
-		}
-
-		for (sol <- (start+1) until game.length) {
-			// Forward propagation
-			printColoredText("search fields with " + sol + " removed pegs", Color.green)
-			Console.flush
-			if(solution(sol) == null)
-				solution(sol) = new LongHashSet
-			val current = solution(sol)
-
-			var backpropagationRequired = false
-			val oldprevioussize = solution(sol - 1).size
-
-			val iter1 = solution(sol - 1).iterator
-			while(iter1.hasNext) {
-				if (!game.addFollower(iter1.next, current)) {
-					backpropagationRequired = true
-					iter1.remove
-				}
-			}
-
-			if(Helper.enableDebug) {
-				printColoredText(", found " + current.size + " fields", Color.green)
-				printlnDebug(" (HashSet collisions=" + current.collisions + ")")
+		if(parallelProcessing) {
+			if(reduceMemory) {
+				// TODO
 			} else {
-				printlnColoredText(", found " + current.size + " fields", Color.green)
+				// TODO
+				//future{}
 			}
+		} else {
+			if(reduceMemory) {
+				for (sol <- (getStartNum+1) until game.length)
+					if(calculateForward(sol))
+						cleanBackward(getEndNum-1)
+			} else {
+				for (sol <- (getStartNum+1) until game.length)
+					calculateForward(sol)
 
-			solution(sol-1).shrink
-
-			val newprevioussize = solution(sol - 1).size
-
-			// Backpropagation
-			def backpropagation() {
-				if(Helper.enableDebug) {
-					print("  clean field list with " + (sol - 1) + " removed pegs: deleted = " + (oldprevioussize - newprevioussize) + "  left = " + newprevioussize)
-					printlnDebug(" (HashSet collisions=" + solution(sol - 1).collisions + ")")
-				} else {
-					println("  clean field list with " + (sol - 1) + " removed pegs: deleted = " + (oldprevioussize - newprevioussize) + "  left = " + newprevioussize)
-				}
-
-				deadends(sol-1) += (oldprevioussize - newprevioussize) // update dead end counter
-				for (i <- (sol - 1).to(start+1, -1)) {
-					var changed = false
-					val cur = solution(i)
-					val oldpresize = solution(i - 1).size
-
-					val iter2 = solution(i - 1).iterator
-					while(iter2.hasNext) {
-						if (!game.hasFollower(iter2.next, cur)) {
-							changed = true
-							iter2.remove
-						}
-					}
-
-					val newpresize = solution(i - 1).size
-
-					if (changed) {
-						if(Helper.enableDebug) {
-							print("  clean field list with " + (i - 1) + " removed pegs: deleted = " + (oldpresize - newpresize) + "  left = " + newpresize)
-							printlnDebug(" (HashSet collisions=" + solution(i - 1).collisions + ")")
-						} else {
-							println("  clean field list with " + (i - 1) + " removed pegs: deleted = " + (oldpresize - newpresize) + "  left = " + newpresize)
-						}
-
-						deadends(i-1) += (oldpresize - newpresize) // update dead end counter
-
-						solution(i-1).shrink
-					} else {
-						return
-					}
-				}
-			}
-
-			if (backpropagationRequired) {
-				backpropagation
-				println()
+				cleanBackward(getEndNum-1)
 			}
 		}
 
@@ -244,16 +174,17 @@ class Solver(val game: Board) {
 		printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
 	}
 
-	def this(game: Board, startField: Long) {
-		this(game, List(startField))
-	}
-
-	protected def getCompleteList(solutionNumber: Int): List[Long] = game.getCompleteList(solution(solutionNumber).toList)
+	protected def getCompleteList(solutionNumber: Int): List[Long] = game.getCompleteList(solution(solutionNumber))
 
 	/**
-	 * @return a list of all possible start-fields
+	 *  @return a list of all possible start-fields
 	 */
-	def getStart(): List[Long] = {
+	def getStart: List[Long] = getCompleteList(getStartNum)
+
+	/**
+	 * @return first non empty solution set id
+	 */
+	def getStartNum: Int = {
 		var start = 0
 		while(solution(start) == null || solution(start).size == 0) {
 			start += 1
@@ -262,50 +193,55 @@ class Solver(val game: Board) {
 				throw new Exception("no set field found")
 		}
 
-		getCompleteList(start)
+		start
 	}
 
 	/**
-	 * @return a list of all possible end-fields
+	 *  @return a list of all possible end-fields
 	 */
-	def getEnd(): List[Long] = {
+	def getEnd: List[Long] = getCompleteList(getEndNum)
+
+	/**
+	 * @return last non empty solution set id
+	 */
+	def getEndNum: Int = {
 		var end = game.length-1
-		while(solution(end) == null || solution(end).size != 0) {
+		while(solution(end) == null || solution(end).size == 0) {
 			end -= 1
 
 			if(end == -1)
 				throw new Exception("solution is empty")
 		}
 
-		getCompleteList(end)
+		end
 	}
 
 	/**
 	 * @return all follower for a provided field
 	 */
-	def getFollower(field: Long): List[Long] = {
+	def getFollower(field: Long): LongHashSet = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos + 1 >= game.length)
-			return List[Long]()
+			return new LongHashSet
 		val next = solution(fieldPos + 1)
 		if(next == null)
-			return List[Long]()
+			return new LongHashSet
 
-		game.getFollower(field, next).toList
+		game.getFollower(field, next)
 	}
 
 	/**
 	 * @return all follower for a provided field
 	 */
-	def getPredecessor(field: Long): List[Long] = {
+	def getPredecessorSet(field: Long): LongHashSet = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos - 1 <= 0)
-			return List[Long]()
+			return new LongHashSet
 		val previous = solution(fieldPos - 1)
 		if(previous == null)
-			return List[Long]()
+			return new LongHashSet
 
-		game.getPredecessor(field, previous).toList
+		game.getPredecessor(field, previous)
 	}
 
 	/**
@@ -333,7 +269,7 @@ class Solver(val game: Board) {
 
 		try {
 			for(i <- 0 until game.length) {
-				if(solution(i) != null) {
+				if(solution(i) != null && solution(i).size > 0) {
 					out.writeInt(i)
 					out.writeInt(solution(i).size)
 					val iter = solution(i).iterator
@@ -371,7 +307,9 @@ class Solver(val game: Board) {
 			while(iter.hasNext)
 				game.getEquivalentFields(iter.next) foreach {
 					v =>
-						for(f <- getFollower(v)) {
+						var viter = getFollower(v).iterator
+						while(viter.hasNext) {
+							val f = viter.next
 							try {
 								current(v) += previous(f)
 							} catch {
@@ -388,33 +326,123 @@ class Solver(val game: Board) {
 		count
 	}
 
-	case class CalculateForward(num: Int)
-	case class CalculateBackward(num: Int)
-	case class CleanForward(num: Int)
-	case class CleanBackward(num: Int)
+	/**
+	 * Forward propagation
+	 */
+	private def calculateForward(sol: Int): Boolean = {
+		printColoredText("search fields with " + sol + " removed pegs", Color.green)
 
-	class Processing extends Actor {
+		if(solution(sol) == null)
+			solution(sol) = new LongHashSet
 
-		def act() = {
-			loop {
-				react {
-					case v: CalculateForward => {
-
-					}
-					case v: CalculateBackward => {
-						// ToDo
-					}
-					case v: CleanForward => { // message is send by CalculateBackward
-						// ToDo
-					}
-					case v: CleanBackward => { // message is send by CalculateForward
-						//
-					}
-				}
+		var deadEndFields = 0
+		val current = solution(sol)
+		val iter = solution(sol - 1).iterator
+		while(iter.hasNext) {
+			if (!game.addFollower(iter.next, current)) {
+				deadEndFields += 1
+				iter.remove
 			}
 		}
 
-		start
+		printColoredText(", found " + current.size + " fields", Color.green)
+		current.printDepth()
+
+		if (deadEndFields > 0) {
+			solution(sol-1).shrink
+			deadends(sol-1) += deadEndFields // update dead end counter
+
+			print("  clean field list with " + (sol - 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol - 1).size)
+			solution(sol - 1).printDepth()
+		}
+
+		deadEndFields > 0
+	}
+
+	/**
+	 * untested
+	 */
+	private def calculateBackward(sol: Int): Boolean = {
+		printColoredText("search fields with " + sol + " removed pegs", Color.green)
+
+		if(solution(sol) == null)
+			solution(sol) = new LongHashSet
+
+		var deadEndFields = 0
+		val current = solution(sol)
+		val iter = solution(sol + 1).iterator
+		while(iter.hasNext) {
+			if (!game.addFollower(iter.next, current)) {
+				deadEndFields += 1
+				iter.remove
+			}
+		}
+
+		printColoredText(", found " + current.size + " fields", Color.green)
+		current.printDepth()
+
+		if (deadEndFields > 0) {
+			solution(sol+1).shrink
+			deadends(sol+1) += deadEndFields // update dead end counter
+
+			print("  clean field list with " + (sol + 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol + 1).size)
+			solution(sol + 1).printDepth()
+		}
+
+		deadEndFields > 0
+	}
+
+	/**
+	 * untested
+	 */
+	private def cleanForward(pos: Int) {
+		for (i <- pos until getEndNum) {
+
+			var deadEndFields = 0
+			val current = solution(i-1)
+			val iter = solution(i).iterator
+			while(iter.hasNext) {
+				if (!game.hasPredecessor(iter.next, current)) {
+					deadEndFields += 1
+					iter.remove
+				}
+			}
+
+			if (deadEndFields > 0) {
+				deadends(i) += deadEndFields // update dead end counter
+				solution(i).shrink
+				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				solution(i).printDepth()
+
+			} else {
+				return
+			}
+		}
+	}
+
+	private def cleanBackward(pos: Int) {
+		for (i <- (pos-1).until(getStartNum, -1)) {
+
+			var deadEndFields = 0
+			val current = solution(i+1)
+			val iter = solution(i).iterator
+			while(iter.hasNext) {
+				if (!game.hasFollower(iter.next, current)) {
+					deadEndFields += 1
+					iter.remove
+				}
+			}
+
+			if (deadEndFields > 0) {
+				deadends(i) += deadEndFields // update dead end counter
+				solution(i).shrink
+				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				solution(i).printDepth()
+
+			} else {
+				return
+			}
+		}
 	}
 
 }

@@ -19,9 +19,13 @@ package com.googlecode.pegsolitaire
 
 import Helper._
 
+/**
+ * TODO:
+ *  rewrite argument parser
+ */
 object TUI {
 	def main(args: Array[String]) {
-		println("Peg Solitaire 0.2\n" +
+		println("Peg Solitaire 0.3dev\n" +
 				"  Copyright (C) 2010 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 		        "  This program is free software: you can redistribute it and/or modify\n" +
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
@@ -36,14 +40,16 @@ object TUI {
 					"                         euro: standard european (not optimized)\n" +
 					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
 					"  -full                calculate all solutions for all possible start fields\n" +
-					"  -single              limit startfield to 1 (use only if -full takes too long)\n" +
+					"  -single              limit startfield to 1 (use if -full takes too long)\n" +
 					"  -save <filename>     since calculating all solutions for complicated fields\n" +
 					"                       takes a while, the results can be saved (gz compressed)\n" +
 					"  -browser             interactive text based interface to explore all possible solutions\n" +
 					"  -count               count the number of ways to a solution (this may take a while)\n" +
 					"  -color               enable colored text output\n" +
+					"  -no-parallel         parallize the solve process\n" +
+					"  -reduce-memory       reduces the memory requirements, but increases the solve time\n" +
 					"  -debug               enable debug output")
-			return
+			exit(1)
 		}
 
 		/*
@@ -59,34 +65,33 @@ object TUI {
 
 		var arg_board = false
 		var selectedGame = GameType.English
+		var reduceMemory = false
+		var parallelize = true
 
 		var i=0
 		while(i<args.length) {
+			/// exit program if argument count is insufficient
+			def checkForArguments(name: String, num: Int=1): Int = {
+				if(i+num == args.length) {
+					printlnError("error: " + name + " requires an additional parameter")
+					exit(-1)
+				}
+				num
+			}
+
 			args(i) match {
 				case "-single" => arg_single = true
 				case "-full" => arg_full = true
 				case "-load" =>
-					i += 1
-					if(i == args.length) {
-						printlnError("error: -load requires an additional parameter")
-						return
-					} else
-						arg_load = args(i)
+					i += checkForArguments("-load")
+					arg_load = args(i)
 				case "-count" => arg_count = true
 				case "-save" =>
-					 i += 1
-					if(i == args.length) {
-						printlnError("error: -save requires an additional parameter")
-						return
-					} else
-						arg_save = args(i)
+					i += checkForArguments("-save")
+					arg_save = args(i)
 				case "-browser" => arg_browse = true
 				case "-board" =>
-					i += 1
-					if(i == args.length) {
-						printlnError("error: -board requires an additional parameter")
-						return
-					}
+					i += checkForArguments("-board")
 					try {
 						selectedGame = GameType.withName(args(i))
 					} catch {
@@ -95,6 +100,8 @@ object TUI {
 					arg_board = true
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
+				case "-reduce-memory" => reduceMemory = true
+				case "-no-parallel" => parallelize = false
 				case s => printlnError("error: unknown parameter " + s + " exit")
 						return
 			}
@@ -176,9 +183,9 @@ object TUI {
 			if(arg_single) {
 				println("Select a start field:")
 				val selection = selectField(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields))
-				Time("Solve")(solitaire = new Solver(solitaireType, selection))
+				Time("Solve")(solitaire = new Solver(solitaireType, List(selection), reduceMemory))
 			} else if(arg_full) {
-				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields))
+				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields, reduceMemory))
 			}
 		} else if(!arg_load.isEmpty) {
 			Time("Load")(solitaire = Solver.fromFile(arg_load))
@@ -218,12 +225,7 @@ object TUI {
 		println("Bye, bye")
 	}
 
-	/**
-	 * Simple console based game-field selection
-	 *
-	 * @return selected game-field
-	 */
-	def selectField(game: Board, choices: List[Long]): Long = {
+	def printFields(game: Board, choices: List[Long])  {
 		val sb = new StringBuilder
 		var tmp = ""
 		for (i <- 0 until choices.length) {
@@ -239,6 +241,15 @@ object TUI {
 			sb append tmp + "\n"
 
 		println(sb.toString)
+	}
+
+	/**
+	 * Simple console based game-field selection
+	 *
+	 * @return selected game-field
+	 */
+	def selectField(game: Board, choices: List[Long]): Long = {
+		printFields(game, choices)
 
 		var input = -1
 		while (input < 0 || input >= choices.length) {
@@ -257,6 +268,34 @@ object TUI {
 		choices(input)
 	}
 
+	/** TODO
+	 * Simple console based game-field selection
+	 *
+	 * @return selected game-fields
+	 */
+	def selectFields(game: Board, choices: List[Long]): List[Long] = {
+		printFields(game, choices)
+
+		print("select multiple fields seperated by spaces > ")
+		val input = readLine()
+
+		val splitted = input.split(' ')
+
+		var selected = List[Long]()
+		for(e <- splitted) {
+			try {
+				val num = e.asInstanceOf[Int]
+				if (num < 0 || num >= choices.length)
+					printlnError("error: ignore " + num)
+				else
+					selected ::= choices(num)
+			} catch {
+				case _ => printlnError("error: ignore " + input)
+			}
+		}
+		selected
+	}
+
 	def solutionBrowser(solitaire: Solver) {
 		while (true) {
 			println("\nSolution Browser: (x = peg, . = empty)")
@@ -269,7 +308,7 @@ object TUI {
 				println("Current field " + (solitaire.game.length - java.lang.Long.bitCount(f)) + "")
 				println(solitaire.game.toString(f))
 				println()
-				s = solitaire.getFollower(f)
+				s = solitaire.getFollower(f).toList
 			}
 			println("Game is finished, press enter to restart or 'x' to exit")
 			readLine match {
