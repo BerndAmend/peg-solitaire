@@ -326,6 +326,8 @@ class Solver(val game: Board) {
 		count
 	}
 
+	private def printDepthDebug(current: LongHashSet) = if(enableDebug) printlnDebug(" " + current.depth) else println()
+
 	/**
 	 * Forward propagation
 	 */
@@ -346,14 +348,14 @@ class Solver(val game: Board) {
 		}
 
 		printColoredText(", found " + current.size + " fields", Color.green)
-		current.printDepth()
+		printDepthDebug(current)
 
 		if (deadEndFields > 0) {
 			solution(sol-1).shrink
 			deadends(sol-1) += deadEndFields // update dead end counter
 
 			print("  clean field list with " + (sol - 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol - 1).size)
-			solution(sol - 1).printDepth()
+			printDepthDebug(solution(sol - 1))
 		}
 
 		deadEndFields > 0
@@ -379,14 +381,14 @@ class Solver(val game: Board) {
 		}
 
 		printColoredText(", found " + current.size + " fields", Color.green)
-		current.printDepth()
+		printDepthDebug(current)
 
 		if (deadEndFields > 0) {
 			solution(sol+1).shrink
 			deadends(sol+1) += deadEndFields // update dead end counter
 
 			print("  clean field list with " + (sol + 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol + 1).size)
-			solution(sol + 1).printDepth()
+			printDepthDebug(solution(sol + 1))
 		}
 
 		deadEndFields > 0
@@ -412,7 +414,7 @@ class Solver(val game: Board) {
 				deadends(i) += deadEndFields // update dead end counter
 				solution(i).shrink
 				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
-				solution(i).printDepth()
+				printDepthDebug(solution(i))
 
 			} else {
 				return
@@ -437,7 +439,7 @@ class Solver(val game: Board) {
 				deadends(i) += deadEndFields // update dead end counter
 				solution(i).shrink
 				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
-				solution(i).printDepth()
+				printDepthDebug(solution(i))
 
 			} else {
 				return

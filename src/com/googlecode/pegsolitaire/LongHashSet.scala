@@ -369,10 +369,14 @@ final class LongHashSet {
 		r
 	}
 
+	case class Depth(average: Double, max: Int, oneAccessPercent: Double) {
+		override def toString = "(HashSet accessDepth average=" + average + " max=" + max + " 1 access required=" + oneAccessPercent + ")"
+	}
+
 	/**
 	 * @return the search deep required to access elements (average, max, oneAccessPercent)
 	 */
-	def depth: (Double, Int, Double) = {
+	def depth: Depth = {
 
 		var averageValue = 0.0
 		var maxValue = 0
@@ -397,14 +401,7 @@ final class LongHashSet {
 
 		averageValue /= size.toDouble
 
-		(averageValue, maxValue, oneAccessElements.toDouble / size.toDouble)
-	}
-
-	def printDepth() {
-		if (enableDebug) {
-			val accessDepth = depth
-			printlnlnDebug(" (HashSet accessDepth average=" + accessDepth._1 + " max=" + accessDepth._2 + " 1 access required=" + accessDepth._3 + ")")
-		}
+		Depth(averageValue, maxValue, oneAccessElements.toDouble / size.toDouble)
 	}
 
 }
