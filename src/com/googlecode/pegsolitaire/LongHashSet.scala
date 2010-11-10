@@ -147,17 +147,14 @@ final class LongHashSet {
 	def addAll(elements: Array[Long]) {
 		ensureSizeFor(_size + elements.length)
 		for (e <- elements) {
-			var index = findOrEmpty(e)
-			if (table(index) == INVALID_ELEMENT) {
-				_size += 1
-				table(index) = e
-			}
+			add(e)
 		}
 	}
 
 	def +=(e: Long) = add(e)
 
 	def add(e: Long) = {
+		require( e != INVALID_ELEMENT)
 		ensureSizeFor(size + 1)
 		val index = findOrEmpty(e)
 		if (table(index) == INVALID_ELEMENT) {
@@ -244,41 +241,32 @@ final class LongHashSet {
 	 * the item is not in the table.
 	 */
 	private def find(o: Long): Int = {
-		var index = getIndex(o)
-		while (true) {
-			val existing = table(index)
-			if (existing == INVALID_ELEMENT)
-				return -1
-
-			if (o == existing)
-				return index
-
-			index += 1
-			if (index == table.length)
-				index = 0
-		}
-		-1
+		var index = findOrEmpty(o)
+		if(table(index) == INVALID_ELEMENT)
+			-1
+		else
+			index
 	}
 
 	/**
 	 * Returns the index in the table at which a particular item resides, or the
 	 * index of an empty slot in the table where this item should be inserted if
 	 * it is not already in the table.
+	 * @return index (-1==you messed with the implementation or found a bug)
 	 */
 	private def findOrEmpty(o: Long): Int = {
 		var index = getIndex(o)
-		while (true) {
+		while (true) { // if this loop becomes an infinite loop, there is no free element in the table (this should never happen)
 			var existing = table(index)
-			if (existing == INVALID_ELEMENT)
-				return index
-			if (o == existing)
+			if (existing == INVALID_ELEMENT || o == existing)
 				return index
 
 			index += 1
 			if (index == table.length)
 				index = 0
 		}
-		index
+		-1 // there is no free place left,
+		// this should not happen since the table should never be filled so much
 	}
 
 	private def getIndex(value: Long): Int = {
