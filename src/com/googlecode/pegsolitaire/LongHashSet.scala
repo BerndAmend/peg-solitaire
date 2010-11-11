@@ -35,7 +35,7 @@ final class LongHashSet {
 	 * started with a size of 2, we'd have to expand as soon as the second item
 	 * was added.
 	 */
-	private val INITIAL_TABLE_SIZE = 4
+	private val INITIAL_TABLE_SIZE = 1 << 3
 
 	final val INVALID_ELEMENT = java.lang.Long.MIN_VALUE
 
@@ -96,6 +96,7 @@ final class LongHashSet {
 
 	def this(expectedSize: Int) {
 		this ()
+		require(expectedSize >= 0)
 		ensureSizeFor(expectedSize)
 	}
 
@@ -112,6 +113,12 @@ final class LongHashSet {
 	def this(c: Collection[Long]) {
 		this ()
 		addAll(c)
+	}
+
+	private def this(t: Array[Long], s: Int) {
+		this()
+		_size = s
+		table = t
 	}
 
 	def +=(c: Iterable[Long]) = addAll(c)
@@ -165,22 +172,7 @@ final class LongHashSet {
 			false
 	}
 
-	def shrink {
-		var newCapacity = INITIAL_TABLE_SIZE;
-		while (newCapacity * 3 < _size * 4)
-			newCapacity <<= 1
-		// shrink only if required
-
-		if (table.length <= newCapacity)
-			return
-
-		val newHashSet = new LongHashSet(this)
-
-		//println("LongHashSet: fillState before=" + used + " after=" + newHashSet.used)
-
-		table = newHashSet.table
-		_size = newHashSet._size
-	}
+	def shrink = ensureSizeFor(_size, true)
 
 	def clear {
 		table = Array.fill[Long](INITIAL_TABLE_SIZE)(INVALID_ELEMENT)
@@ -213,27 +205,26 @@ final class LongHashSet {
 	/**
 	 * Ensures the set is large enough to contain the specified number of entries.
 	 */
-	private def ensureSizeFor(expectedSize: Int) {
-		if (table.length * 3 >= expectedSize * 4)
+	private def ensureSizeFor(expectedSize: Int, allowShrink: Boolean=false) {
+		if(!allowShrink && table.length * 3 >= expectedSize * 4)
 			return
 
-		var newCapacity = table.length << 1
+		// calculate table size
+		var newCapacity = if(allowShrink) INITIAL_TABLE_SIZE else table.length
 		while (newCapacity * 3 < expectedSize * 4)
 			newCapacity <<= 1
 
-		var oldTable = table;
+		if (newCapacity == table.length) // unchanged
+			return
+
+		if(!allowShrink && newCapacity < table.length) // shrink only if requested
+			return
+
+		//println("LongHashSet: fillState before=" + used + " after=" + newHashSet.used)
+		val old = new LongHashSet(table, _size)
 		table = Array.fill[Long](newCapacity)(INVALID_ELEMENT)
-		for (o <- oldTable) {
-			if (o != INVALID_ELEMENT) {
-				var newIndex = getIndex(o)
-				while (table(newIndex) != INVALID_ELEMENT) {
-					newIndex += 1
-					if (newIndex == table.length)
-						newIndex = 0
-				}
-				table(newIndex) = o
-			}
-		}
+		_size = 0
+		addAll(old)
 	}
 
 	/**
