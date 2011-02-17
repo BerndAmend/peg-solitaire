@@ -25,6 +25,7 @@
           <option name="SMART_TABS" value="false" />
           <option name="LABEL_INDENT_SIZE" value="0" />
           <option name="LABEL_INDENT_ABSOLUTE" value="false" />
+          <option name="USE_RELATIVE_INDENTS" value="false" />
         </ADDITIONAL_INDENT_OPTIONS>
         <ADDITIONAL_INDENT_OPTIONS fileType="xml">
           <option name="INDENT_SIZE" value="4" />
@@ -34,6 +35,7 @@
           <option name="SMART_TABS" value="false" />
           <option name="LABEL_INDENT_SIZE" value="0" />
           <option name="LABEL_INDENT_ABSOLUTE" value="false" />
+          <option name="USE_RELATIVE_INDENTS" value="false" />
         </ADDITIONAL_INDENT_OPTIONS>
       </value>
     </option>
@@ -209,6 +211,9 @@
   <component name="ProjectDetails">
     <option name="projectName" value="peg-solitaire" />
   </component>
+  <component name="ProjectDictionaryState">
+    <dictionary name="bernd" />
+  </component>
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/peg-solitaire.iml" filepath="$PROJECT_DIR$/peg-solitaire.iml" />
@@ -217,14 +222,21 @@
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
-  <component name="ScalacSettings">
-    <option name="OPTIMISE" value="true" />
-  </component>
   <component name="SvnBranchConfigurationManager">
     <option name="mySupportsUserInfoFilter" value="true" />
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="hg4idea" />
+  </component>
+  <component name="libraryTable">
+    <library name="scala 2.8">
+      <CLASSES>
+        <root url="file:///usr/share/scala/lib" />
+      </CLASSES>
+      <JAVADOC />
+      <SOURCES />
+      <jarDirectory url="file:///usr/share/scala/lib" recursive="false" />
+    </library>
   </component>
 </project>
 

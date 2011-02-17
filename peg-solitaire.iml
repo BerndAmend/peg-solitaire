@@ -1,19 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="FacetManager">
-    <facet type="Scala" name="Scala">
+    <facet type="scala" name="Scala">
       <configuration>
-        <option name="takeFromSettings" value="true" />
-        <option name="myScalaCompilerJarPaths">
-          <array>
-            <option value="/usr/share/scala/lib/scala-compiler.jar" />
-          </array>
-        </option>
-        <option name="myScalaSdkJarPaths">
-          <array>
-            <option value="/usr/share/scala/lib/scala-library.jar" />
-          </array>
-        </option>
+        <option name="compilerLibraryLevel" value="Project" />
+        <option name="compilerLibraryName" value="scala 2.8" />
+        <option name="optimiseBytecode" value="true" />
       </configuration>
     </facet>
   </component>
@@ -26,7 +18,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="scala-2.8" level="application" />
+    <orderEntry type="library" name="scala 2.8" level="project" />
   </component>
 </module>
 
