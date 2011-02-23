@@ -127,7 +127,7 @@ class Solver(val game: Board) {
 	/**
 	 * used to count in the ctor the dead ends
 	 */
-	private val deadends = Array.fill[BigDecimal](game.length)(BigDecimal(0))
+	private val deadends = Array.fill[Long](game.length)(0L)
 
 	def this(game: Board, startFields: Iterable[Long], reduceMemory: Boolean = false, parallelProcessing: Boolean = false) {
 		this(game)
@@ -168,9 +168,9 @@ class Solver(val game: Board) {
 		}
 
 		println("\nFields without a 1 peg solution")
-		var count = BigDecimal(0)
+		var count = 0L
 		for(i <- 0 until deadends.length) {
-			if(deadends(i) > 0) {
+			if(deadends(i) > 0L) {
 				println("  There are " + deadends(i) + " with " + i + " removed pegs")
 				count += deadends(i)
 			}
@@ -311,7 +311,7 @@ class Solver(val game: Board) {
 			while(iter.hasNext)
 				game.getEquivalentFields(iter.next) foreach {
 					v =>
-						var viter = getFollower(v).iterator
+						val viter = getFollower(v).iterator
 						while(viter.hasNext) {
 							val f = viter.next
 							try {
@@ -341,12 +341,12 @@ class Solver(val game: Board) {
 		if(solution(sol) == null)
 			solution(sol) = new LongHashSet
 
-		var deadEndFields = 0
+		var deadEndFields = 0L
 		val current = solution(sol)
 		val iter = solution(sol - 1).iterator
 		while(iter.hasNext) {
 			if (!game.addFollower(iter.next, current)) {
-				deadEndFields += 1
+				deadEndFields += 1L
 				iter.remove
 			}
 		}
@@ -354,7 +354,7 @@ class Solver(val game: Board) {
 		printColoredText(", found " + current.size + " fields", Color.green)
 		printDepthDebug(current)
 
-		if (deadEndFields > 0) {
+		if (deadEndFields > 0L) {
 			solution(sol-1).shrink
 			deadends(sol-1) += deadEndFields // update dead end counter
 
@@ -362,7 +362,7 @@ class Solver(val game: Board) {
 			printDepthDebug(solution(sol - 1))
 		}
 
-		deadEndFields > 0
+		deadEndFields > 0L
 	}
 
 	/**
@@ -374,12 +374,12 @@ class Solver(val game: Board) {
 		if(solution(sol) == null)
 			solution(sol) = new LongHashSet
 
-		var deadEndFields = 0
+		var deadEndFields = 0L
 		val current = solution(sol)
 		val iter = solution(sol + 1).iterator
 		while(iter.hasNext) {
 			if (!game.addFollower(iter.next, current)) {
-				deadEndFields += 1
+				deadEndFields += 1L
 				iter.remove
 			}
 		}
@@ -387,7 +387,7 @@ class Solver(val game: Board) {
 		printColoredText(", found " + current.size + " fields", Color.green)
 		printDepthDebug(current)
 
-		if (deadEndFields > 0) {
+		if (deadEndFields > 0L) {
 			solution(sol+1).shrink
 			deadends(sol+1) += deadEndFields // update dead end counter
 
@@ -395,7 +395,7 @@ class Solver(val game: Board) {
 			printDepthDebug(solution(sol + 1))
 		}
 
-		deadEndFields > 0
+		deadEndFields > 0L
 	}
 
 	/**
@@ -404,17 +404,17 @@ class Solver(val game: Board) {
 	private def cleanForward(pos: Int) {
 		for (i <- pos until getEndNum) {
 
-			var deadEndFields = 0
+			var deadEndFields = 0L
 			val current = solution(i-1)
 			val iter = solution(i).iterator
 			while(iter.hasNext) {
 				if (!game.hasPredecessor(iter.next, current)) {
-					deadEndFields += 1
+					deadEndFields += 1L
 					iter.remove
 				}
 			}
 
-			if (deadEndFields > 0) {
+			if (deadEndFields > 0L) {
 				deadends(i) += deadEndFields // update dead end counter
 				solution(i).shrink
 				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
@@ -429,21 +429,26 @@ class Solver(val game: Board) {
 	private def cleanBackward(pos: Int) {
 		for (i <- (pos-1).until(getStartNum, -1)) {
 
-			var deadEndFields = 0
+			var deadEndFields = 0L
 			val current = solution(i+1)
 			val iter = solution(i).iterator
 			while(iter.hasNext) {
 				if (!game.hasFollower(iter.next, current)) {
-					deadEndFields += 1
+					deadEndFields += 1L
 					iter.remove
 				}
 			}
 
-			if (deadEndFields > 0) {
+			if (deadEndFields > 0L) {
 				deadends(i) += deadEndFields // update dead end counter
 				solution(i).shrink
 				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
 				printDepthDebug(solution(i))
+			} else {
+				return
+			}
+		}
+	}
 
 	private def cleanBackwardParallel(pos: Int) {
 		val threadCount = Runtime.getRuntime.availableProcessors
