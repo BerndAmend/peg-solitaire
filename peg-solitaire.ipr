@@ -4,9 +4,9 @@
     <defaultAnt bundledAnt="true" />
   </component>
   <component name="ArtifactManager">
-    <artifact type="jar" name="PegSolitaire0.2.jar">
+    <artifact type="jar" name="PegSolitaire0.3.jar">
       <output-path>$PROJECT_DIR$/out/</output-path>
-      <root id="archive" name="PegSolitaire0.2.jar">
+      <root id="archive" name="PegSolitaire0.3.jar">
         <element id="module-output" name="peg-solitaire" />
         <element id="directory" name="META-INF">
           <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
@@ -69,6 +69,29 @@
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false" defaultCharsetForPropertiesFiles="UTF-8" />
   <component name="EntryPointsManager">
     <entry_points version="2.0" />
+  </component>
+  <component name="InspectionProjectProfileManager">
+    <profiles>
+      <profile version="1.0" is_locked="false">
+        <option name="myName" value="Project Default" />
+        <option name="myLocal" value="false" />
+        <inspection_tool class="CollectionAddedToSelf" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="MisspelledHashcode" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="ObjectEquality" enabled="true" level="WARNING" enabled_by_default="true">
+          <option name="m_ignoreEnums" value="true" />
+          <option name="m_ignoreClassObjects" value="false" />
+          <option name="m_ignorePrivateConstructors" value="false" />
+        </inspection_tool>
+        <inspection_tool class="ObjectToString" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="Suspicious Inferred Type" enabled="true" level="WARNING" enabled_by_default="true" />
+        <inspection_tool class="Suspicious New Line in Method Call" enabled="true" level="WARNING" enabled_by_default="true" />
+      </profile>
+    </profiles>
+    <option name="PROJECT_PROFILE" value="Project Default" />
+    <option name="USE_PROJECT_PROFILE" value="true" />
+    <version value="1.0" />
   </component>
   <component name="JavadocGenerationManager">
     <option name="OUTPUT_DIRECTORY" />
@@ -233,8 +256,18 @@
       <CLASSES>
         <root url="file:///usr/share/scala/lib" />
       </CLASSES>
-      <JAVADOC />
-      <SOURCES />
+      <JAVADOC>
+        <root url="file:///usr/share/doc/scala" />
+      </JAVADOC>
+      <SOURCES>
+        <root url="jar:///usr/share/scala/src/scalap-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/sbaz-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/scala-compiler-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/scala-swing-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/scala-library-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/scala-dbc-src.jar!/" />
+        <root url="jar:///usr/share/scala/src/scala-partest-src.jar!/" />
+      </SOURCES>
       <jarDirectory url="file:///usr/share/scala/lib" recursive="false" />
     </library>
   </component>
