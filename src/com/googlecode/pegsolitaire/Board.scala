@@ -270,7 +270,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	final def hasPredecessor(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(~field, field, solutions)
 
 	/**
-	 * @return true if field has a follower in the solutions HashSet
+	 * @return all related fields that are in the solutions HashSet
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
 		var result = new LongHashSet
@@ -343,21 +343,30 @@ o o o o o o o
 . . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.English) {
 
 	override def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean = {
+		if(hashSet.contains(field)) return true
+
 		val n90  = rotate90(field)
+		if(hashSet.contains(n90)) return true
+
 		val n180 = rotate90(n90)
+		if(hashSet.contains(n180)) return true
+
 		val n270 = rotate90(n180)
+		if(hashSet.contains(n270)) return true
 
 		val v    = vflip(field)
-		val v90  = vflip(n90)
-		val v180 = vflip(n180)
-		val v270 = vflip(n270)
+		if(hashSet.contains(v)) return true
 
-		(
-			hashSet.contains(field) || hashSet.contains(n90 ) ||
-			hashSet.contains(n180 ) || hashSet.contains(n270) ||
-			hashSet.contains(v    ) || hashSet.contains(v90 ) ||
-			hashSet.contains(v180 ) || hashSet.contains(v270)
-		)
+		val v90  = vflip(n90)
+		if(hashSet.contains(v90)) return true
+
+		val v180 = vflip(n180)
+		if(hashSet.contains(v180)) return true
+
+		val v270 = vflip(n270)
+		if(hashSet.contains(v270)) return true
+
+		false
 	}
 
 	override def getEquivalentFields(field: Long) = {
