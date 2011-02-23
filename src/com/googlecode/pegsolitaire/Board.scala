@@ -34,6 +34,13 @@ object GameType extends Enumeration {
 /**
  * ToDo: auto-detect all possible rotated and flipped game-fields
  *
+ * check usage of C/C++ using
+ *  //#include <x86intrin.h>
+ *  // sse: __m128 _mm_and_ps (__m128 __A, __m128 __B)
+ *  // sse: __m128 _mm_xor_ps (__m128 __A, __m128 __B)
+ *  // avx: __m256 _mm256_and_ps (__m256 __A, __m256 __B)
+ *  // avx: __m256 _mm256_xor_ps (__m256 __A, __m256 __B)
+ *
  * @author Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  */
 class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value], val gameType: GameType.Value = GameType.User) {
@@ -211,18 +218,33 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
-	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-		var hasFollower = false
+  private final def calculateRelatedFields(checkfield: Long, field: Long): List[Long] = {
+		var result = List[Long]()
 		var i = 0
 		while (i < movemask.size) {
 			var tmp = checkfield & movemask(i)
-			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
-				addToLongHashSet(field ^ movemask(i), solutions)
-				hasFollower = true
-			}
+			if (tmp == checkmask1(i) || tmp == checkmask2(i))
+        result ::= field ^ movemask(i)
 			i += 1
 		}
-		hasFollower
+    result
+	}
+
+	/**
+	 * @return complete follower list
+	 */
+	final def calculateFollower(field: Long): List[Long] = calculateRelatedFields(field, field)
+
+	/**
+	 * @return complete predecessor list
+	 */
+	final def calculatePredecessor(field: Long): List[Long] = calculateRelatedFields(~field, field)
+
+	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
+    val result = calculateRelatedFields(checkfield, field)
+
+    result.foreach{ addToLongHashSet(_, solutions) }
+		!result.isEmpty
 	}
 
 	/**
