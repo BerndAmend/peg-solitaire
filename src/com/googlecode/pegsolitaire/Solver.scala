@@ -66,7 +66,7 @@ object Solver {
 						possibleMoves(i) = MoveDirections(in.readInt)
 
 					// read board Description
-					var boardDescription = new Array[Char](in.readInt)
+					val boardDescription = new Array[Char](in.readInt)
 					for(i <- 0 until boardDescription.size)
 						boardDescription(i) = in.readChar
 
