@@ -29,7 +29,7 @@ object Solver {
 	 * <type: Int>
 	 * <Possible Moves count: Int><Possible Moves: repeated Int> # only available in user mode
 	 * <boardDescription length><boardDescription: repeated Char> # only available in user mode
-	 * <number of bits set:Int><number of values: Int><values: repated Long>: repeated until eof
+	 * <number of bits set:Int><number of values: Int><values: repeated Long>: repeated until eof
 	 */
 	def fromFile(filename: String): Solver = {
 		var output: Solver = null
