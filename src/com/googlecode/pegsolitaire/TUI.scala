@@ -136,7 +136,7 @@ object TUI {
 		var solitaire: Solver = null
 
 		if(arg_board) {
-			var solitaireType = selectedGame match {
+			val solitaireType = selectedGame match {
 				case GameType.English => EnglishBoard
 				case GameType.European => EuropeanBoard
 				case GameType.Holes15 => Board15Holes

@@ -184,7 +184,7 @@ final class LongHashSet {
 	def iterator = new HashSetIterator
 
 	def remove(o: Long): Boolean = {
-		var index = find(o)
+		val index = find(o)
 		if (index < 0)
 			return false
 		internalRemove(index)
@@ -232,7 +232,7 @@ final class LongHashSet {
 	 * the item is not in the table.
 	 */
 	private def find(o: Long): Int = {
-		var index = findOrEmpty(o)
+		val index = findOrEmpty(o)
 		if(table(index) == INVALID_ELEMENT)
 			-1
 		else
@@ -283,7 +283,7 @@ final class LongHashSet {
 			index = 0
 
 		while (table(index) != INVALID_ELEMENT) {
-			var targetIndex = getIndex(table(index))
+			val targetIndex = getIndex(table(index))
 			if (hole < index) {
 				/*
 				 * "Normal" case, the index is past the hole and the "bad range" is from

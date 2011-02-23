@@ -292,7 +292,7 @@ class Solver(val game: Board) {
 		var current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
 		// init the current with BigDecimal = 1
-		var iter = solution(game.length-1).iterator
+		val iter = solution(game.length-1).iterator
 		while(iter.hasNext)
 			game.getEquivalentFields(iter.next) foreach {v => current(v) = 1 }
 
@@ -303,7 +303,7 @@ class Solver(val game: Board) {
 			previous = current
 			current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
-			var iter = solution(i).iterator
+			val iter = solution(i).iterator
 			while(iter.hasNext)
 				game.getEquivalentFields(iter.next) foreach {
 					v =>

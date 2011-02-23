@@ -174,7 +174,7 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
     }
 
 	def callCallback {
-		var percent = nread.toDouble / size.toDouble
+		val percent = nread.toDouble / size.toDouble
 		if(percent >= lastPercent+displayStep) {
 			lastPercent = percent
 			callback(percent)
