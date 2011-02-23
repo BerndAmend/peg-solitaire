@@ -46,7 +46,7 @@ object TUI {
 					"  -browser             interactive text based interface to explore all possible solutions\n" +
 					"  -count               count the number of ways to a solution (this may take a while)\n" +
 					"  -color               enable colored text output\n" +
-					"  -no-parallel         parallize the solve process\n" +
+					"  -no-parallelize      don't parallelize parts of the solve process, decreases the memory usage\n" +
 					"  -reduce-memory       reduces the memory requirements, but increases the solve time\n" +
 					"  -debug               enable debug output")
 			exit(1)
@@ -101,7 +101,7 @@ object TUI {
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
 				case "-reduce-memory" => reduceMemory = true
-				case "-no-parallel" => parallelize = false
+				case "-no-parallelize" => parallelize = false
 				case s => printlnError("error: unknown parameter " + s + " exit")
 						return
 			}
@@ -182,10 +182,10 @@ object TUI {
 			}
 			if(arg_single) {
 				println("Select a start field:")
-				val selection = selectField(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields))
-				Time("Solve")(solitaire = new Solver(solitaireType, List(selection), reduceMemory))
+				val selection = selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields))
+				Time("Solve")(solitaire = new Solver(solitaireType, selection, reduceMemory, parallelize))
 			} else if(arg_full) {
-				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields, reduceMemory))
+				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields, reduceMemory, parallelize))
 			}
 		} else if(!arg_load.isEmpty) {
 			Time("Load")(solitaire = Solver.fromFile(arg_load))

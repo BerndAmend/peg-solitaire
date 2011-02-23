@@ -145,10 +145,14 @@ class Solver(val game: Board) {
 
 		if(parallelProcessing) {
 			if(reduceMemory) {
-				// TODO
+				for (sol <- (getStartNum+1) until game.length)
+					if(calculateForward(sol))
+						cleanBackwardParallel(getEndNum-1)
 			} else {
-				// TODO
-				//future{}
+				for (sol <- (getStartNum+1) until game.length)
+					calculateForward(sol)
+
+				cleanBackwardParallel(getEndNum-1)
 			}
 		} else {
 			if(reduceMemory) {
@@ -441,6 +445,47 @@ class Solver(val game: Board) {
 				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
 				printDepthDebug(solution(i))
 
+	private def cleanBackwardParallel(pos: Int) {
+		val threadCount = Runtime.getRuntime.availableProcessors
+		
+		for (i <- (pos - 1).until(getStartNum, -1)) {
+
+			val results = (0 until threadCount).map {
+				threadID => future[(Long, Long, List[Long])] {
+					var deadEndFields = 0L
+					var resultSize = 0L
+					val current = solution(i + 1)
+					val iter = solution(i).iteratorRead(threadID, threadCount)
+					var result: List[Long] = List[Long]()
+					while (iter.hasNext) {
+						val elem = iter.next
+						if (game.hasFollower(elem, current)) {
+							result ::= elem
+							resultSize += 1L
+						} else {
+							deadEndFields += 1L
+						}
+					}
+					(deadEndFields, resultSize, result)
+				}
+			}
+
+			// merge
+			val resultSize = results.foldLeft(0L) ( _ + _()._2) // wait for results and calculate new hashset size
+			val newsol = new LongHashSet()
+			var deadEndFields = 0L
+			for (e <- results) {
+				val r = e()
+				deadEndFields += r._1 // update dead end counter
+				newsol += r._3
+			}
+
+			solution(i) = newsol
+			deadends(i) += deadEndFields
+
+			if (deadEndFields > 0L) {
+				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				printDepthDebug(solution(i))
 			} else {
 				return
 			}
