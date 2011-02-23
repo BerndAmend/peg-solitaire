@@ -21,13 +21,13 @@
 package com.googlecode.pegsolitaire
 
 import Helper._
-import java.util.{Collection, Iterator, NoSuchElementException}
+import java.util.{Collection, NoSuchElementException}
 
 /**
  * A memory-efficient hash set optimized for Longs
  * based on the java HashSet implementation by Google Inc.
  */
-final class LongHashSet {
+final class LongHashSet extends scala.collection.Iterable[Long] {
 
 	/**
 	 * In the interest of memory-savings, we start with the smallest feasible
@@ -37,7 +37,7 @@ final class LongHashSet {
 	 */
 	private val INITIAL_TABLE_SIZE = 1 << 3
 
-	final val INVALID_ELEMENT = java.lang.Long.MIN_VALUE
+	final val INVALID_ELEMENT = Long.MinValue
 
 	/**
 	 * Number of objects in this set; transient due to custom serialization.
@@ -45,7 +45,7 @@ final class LongHashSet {
 	 */
 	protected var _size = 0
 
-	def size = _size
+	override def size = _size
 
 	def used = _size.toDouble / table.length.toDouble
 
@@ -55,9 +55,17 @@ final class LongHashSet {
 	 */
 	protected var table = Array.fill[Long](INITIAL_TABLE_SIZE)(INVALID_ELEMENT)
 
-	class HashSetIterator {
-		private var index = 0
-		private[LongHashSet] var last = -1
+  /**
+   * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
+   * e.g. to read multiple elements from a HashSet at a time without synchronization
+   */
+	class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) extends scala.collection.Iterator[Long] {
+    require(groupID >= 0)
+    require(groupSize > 0)
+    require(groupID < groupSize)
+    
+		protected var index = groupID
+		protected[LongHashSet] var last = -1
 
 		advanceToItem()
 
@@ -69,10 +77,21 @@ final class LongHashSet {
 
 			last = index
 			val toReturn = table(index)
-			index += 1
+			index += groupSize
 			advanceToItem()
 			toReturn
 		}
+
+		private def advanceToItem() {
+			while (index < table.length) {
+				if (table(index) != INVALID_ELEMENT)
+					return
+				index += groupSize
+			}
+		}
+	}
+
+	class HashSetIterator extends HashSetIteratorRead(0,1) {
 
 		def remove() {
 			if (last < 0)
@@ -84,14 +103,6 @@ final class LongHashSet {
 
 			last = -1
 		}
-
-		private def advanceToItem() {
-			while (index < table.length) {
-				if (table(index) != INVALID_ELEMENT)
-					return
-				index += 1
-			}
-		}
 	}
 
 	def this(expectedSize: Int) {
@@ -101,11 +112,6 @@ final class LongHashSet {
 	}
 
 	def this(c: Iterable[Long]) {
-		this ()
-		addAll(c)
-	}
-
-	def this(c: LongHashSet) {
 		this ()
 		addAll(c)
 	}
@@ -124,18 +130,10 @@ final class LongHashSet {
 	def +=(c: Iterable[Long]) = addAll(c)
 
 	def addAll(c: Iterable[Long]) = {
-		ensureSizeFor(_size + c.size)
+		if(c.isInstanceOf[LongHashSet])
+			ensureSizeFor(_size + c.size)
 		for (e <- c)
 			add(e)
-	}
-
-	def +=(c: LongHashSet) = addAll(c)
-
-	def addAll(c: LongHashSet) = {
-		ensureSizeFor(_size + c.size)
-		val citer = c.iterator
-		while (citer.hasNext)
-			add(citer.next)
 	}
 
 	def +=(c: Collection[Long]) = addAll(c)
@@ -174,7 +172,7 @@ final class LongHashSet {
 
 	def shrink = ensureSizeFor(_size, true)
 
-	def clear {
+	def clear() {
 		table = Array.fill[Long](INITIAL_TABLE_SIZE)(INVALID_ELEMENT)
 		_size = 0
 	}
@@ -182,6 +180,8 @@ final class LongHashSet {
 	def contains(o: Long) = find(o) >= 0
 
 	def iterator = new HashSetIterator
+  def iteratorRead = new HashSetIteratorRead
+  def iteratorRead(groupID: Int, groupSize: Int) = new HashSetIteratorRead(groupID, groupSize)
 
 	def remove(o: Long): Boolean = {
 		val index = find(o)
@@ -313,33 +313,10 @@ final class LongHashSet {
 		}
 	}
 
-	override def toString = {
-		val str = new StringBuilder
-
-		val citer = iterator
-		while (citer.hasNext) {
-			str ++= citer.next.toString
-			str += ' '
-		}
-
-		str.toString
-	}
-
-	def toList = {
-		var r = List[Long]()
-
-		val iter = iterator
-		while (iter.hasNext) {
-			r ::= iter.next
-		}
-
-		r
-	}
-
 	def toHashSet = {
 		val r = new scala.collection.mutable.HashSet[Long]
 
-		val iter = iterator
+		val iter = iteratorRead
 
 		while (iter.hasNext) {
 			r add iter.next
@@ -361,7 +338,7 @@ final class LongHashSet {
 		var maxValue = 0
 		var oneAccessElements = 0
 
-		val iter = iterator
+		val iter = iteratorRead
 		val tableSize = table.size
 		while (iter.hasNext) {
 			val v = iter.next
