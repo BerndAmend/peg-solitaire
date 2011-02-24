@@ -32,7 +32,7 @@ object TUI {
 		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
 
 		if(args.length == 0) {
-			println("usage [[-board user|english|15holes|euro]|[-load <filename>] [-single|-full] [-save <filename>] [-browser] [-count] [additional options]\n" +
+			println("usage [[-board user|english|15holes|euro]|[-load <filename>] [-select|-full] [-save <filename>] [-browser] [-count] [additional options]\n" +
 					"  -board <selection>   select a solitaire board\n" +
 					"                         user: create your own board!\n" +
 					"                         english: standard english\n" +
@@ -40,7 +40,7 @@ object TUI {
 					"                         euro: standard european (not optimized)\n" +
 					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
 					"  -full                calculate all solutions for all possible start fields\n" +
-					"  -single              limit startfield to 1 (use if -full takes too long)\n" +
+					"  -select              limit startfields to a user defined selection\n" +
 					"  -save <filename>     since calculating all solutions for complicated fields\n" +
 					"                       takes a while, the results can be saved (gz compressed)\n" +
 					"  -browser             interactive text based interface to explore all possible solutions\n" +
@@ -55,7 +55,7 @@ object TUI {
 		/*
 		 * parse command line arguments
 		 */
-		var arg_single = false
+		var arg_select = false
 		var arg_full = false
 		var arg_load = ""
 		var arg_count = false
@@ -80,7 +80,7 @@ object TUI {
 			}
 
 			args(i) match {
-				case "-single" => arg_single = true
+				case "-select" => arg_select = true
 				case "-full" => arg_full = true
 				case "-load" =>
 					i += checkForArguments("-load")
@@ -118,13 +118,13 @@ object TUI {
 			return
 		}
 
-		if(arg_full && arg_single) {
-			printlnError("error: -single and -full are mutually exclusive")
+		if(arg_full && arg_select) {
+			printlnError("error: -select and -full are mutually exclusive")
 			return
 		}
 
-		if(arg_load.isEmpty && !arg_full && !arg_single) {
-			printlnError("error: either -single or -full has to be selected")
+		if(arg_load.isEmpty && !arg_full && !arg_select) {
+			printlnError("error: either -select or -full has to be selected")
 			return
 		}
 
@@ -180,8 +180,8 @@ object TUI {
 				readLine
 				sol
 			}
-			if(arg_single) {
-				println("Select a start field:")
+			if(arg_select) {
+				println("Select one or more start fields:")
 				val selection = selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields))
 				Time("Solve")(solitaire = new Solver(solitaireType, selection, reduceMemory, parallelize))
 			} else if(arg_full) {
@@ -268,7 +268,7 @@ object TUI {
 		choices(input)
 	}
 
-	/** TODO
+	/**
 	 * Simple console based game-field selection
 	 *
 	 * @return selected game-fields
@@ -276,23 +276,31 @@ object TUI {
 	def selectFields(game: Board, choices: List[Long]): List[Long] = {
 		printFields(game, choices)
 
-		print("select multiple fields seperated by spaces > ")
-		val input = readLine()
-
-		val splitted = input.split(' ')
-
 		var selected = List[Long]()
-		for(e <- splitted) {
-			try {
-				val num = e.asInstanceOf[Int]
-				if (num < 0 || num >= choices.length)
-					printlnError("error: ignore " + num)
-				else
-					selected ::= choices(num)
-			} catch {
-				case _ => printlnError("error: ignore " + input)
+
+		do {
+			print("select multiple fields seperated by spaces (x to abort) > ")
+			val input = readLine()
+
+			val splitted = input.split(' ')
+
+			for(e <- splitted) {
+				if(e == "x")
+					exit(0)
+				try {
+					val num = e.toInt
+					if (num < 0 || num >= choices.length)
+						printlnError("ignore invalid selection: " + num)
+					else
+						selected ::= choices(num)
+				} catch {
+					case _ => printlnError("ignore invalid selection: " + input)
+				}
 			}
-		}
+
+			if(selected.isEmpty)
+				println("Nothing selected, try again")
+		} while(selected.isEmpty)
 		selected
 	}
 
