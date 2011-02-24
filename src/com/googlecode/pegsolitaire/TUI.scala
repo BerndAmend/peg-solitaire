@@ -95,7 +95,8 @@ object TUI {
 					try {
 						selectedGame = GameType.withName(args(i))
 					} catch {
-						case _ => printlnError("error: unknown game type")
+						case _ => printlnError("error: unknown board type, exit")
+											return
 					}
 					arg_board = true
 				case "-color" => Helper.enableColor = true
@@ -137,7 +138,9 @@ object TUI {
 
 		if(arg_board) {
 			val solitaireType = selectedGame match {
-				case GameType.English => EnglishBoard
+				case GameType.English =>
+					printlnColoredText("All numbers are without equivalent fields.", Color.blue)
+					EnglishBoard
 				case GameType.European => EuropeanBoard
 				case GameType.Holes15 => Board15Holes
 				case GameType.User =>
@@ -197,7 +200,7 @@ object TUI {
 		try {
 			solitaire.getStart
 		} catch {
-			case _ => printlnError("error: There are no solutions, exit")
+			case _ => printlnError("error: there is no solution, sorry")
 			return
 		}
 
@@ -206,15 +209,14 @@ object TUI {
 		for (i <- 0 until solitaire.game.length) {
 			if(solitaire.solution(i) != null) {
 				val num = solitaire.solution(i).size
-				println("  - removed pegs = " + i + "  possible fields = " + num +
-				(if(selectedGame == GameType.English) " (without equivalent fields)" else ""));
+				println("  - removed pegs = " + i + "  possible fields = " + num)
 				count += num
 			}
 		}
-		printlnColoredText("There are " + count + " possible fields", Color.blue)
+		printlnColoredText("There are " + count + " possible fields.", Color.blue)
 
 		if(arg_count)
-			printlnColoredText("There are " + solitaire.countPossibleGames + " ways to a solution", Color.blue)
+			printlnColoredText("There are " + solitaire.countPossibleGames + " ways to a solution.", Color.blue)
 
 		if(!arg_save.isEmpty)
 			solitaire.save(arg_save)
@@ -251,21 +253,27 @@ object TUI {
 	def selectField(game: Board, choices: List[Long]): Long = {
 		printFields(game, choices)
 
-		var input = -1
-		while (input < 0 || input >= choices.length) {
-			print("> ")
+		var selection = -1
+		while (selection < 0 || selection >= choices.length) {
+			print("(x to abort) > ")
 			Console.flush
 			try {
-				input = readInt
+				val input = readLine()
+				if(input.toLowerCase=="x") {
+					println("Bye, bye")
+					exit(0)
+				}
+				selection = input.toInt
 			} catch {
-				case _ => input = -1
+				case _ =>
+					printlnError("error: invalid input, please try again")
+					selection = -1
 			}
-			if (input < 0 || input >= choices.length) {
-				printlnError("error: invalid input, please try again")
-			}
+			if (selection < 0 || selection >= choices.length)
+				printlnError("error: invalid selection, please try again")
 		}
 
-		choices(input)
+		choices(selection)
 	}
 
 	/**
@@ -285,8 +293,10 @@ object TUI {
 			val splitted = input.split(' ')
 
 			for(e <- splitted) {
-				if(e == "x")
+				if(e.toLowerCase == "x") {
+					println("Bye, bye")
 					exit(0)
+				}
 				try {
 					val num = e.toInt
 					if (num < 0 || num >= choices.length)
