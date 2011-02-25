@@ -25,7 +25,7 @@ import Helper._
  */
 object TUI {
 	def main(args: Array[String]) {
-		println("Peg Solitaire 0.3\n" +
+		println("Peg Solitaire 0.4dev\n" +
 				"  Copyright (C) 2010-2011 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 		        "  This program is free software: you can redistribute it and/or modify\n" +
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
