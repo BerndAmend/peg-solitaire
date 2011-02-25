@@ -258,19 +258,6 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	final def addPredecessor(field: Long, solutions: LongHashSet): Boolean = addRelatedFields(~field, field, solutions)
 
 	/**
-	 * Add a field into the hashSet, if isInLongHashSet returns false
-	 *
-	 * @return true if the field was really added
-	 */
-	final def addToLongHashSet(field: Long, hashSet: LongHashSet) = {
-		if (!isInLongHashSet(field, hashSet)) {
-			hashSet += field
-			true
-		} else
-			false
-	}
-
-	/**
 	 * return true if field has a follower in the solutions HashSet
 	 */
 	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
@@ -319,9 +306,21 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	/**
 	 * check if a field is already in the hashSet
 	 * to reduce memory constraints derived classes should
+	 *
+	 * if you override this function you also have to override addToLongHashSet
+	 *
 	 * @return true if a rotation/flipped version already exists in the hashSet
 	 */
 	def isInLongHashSet(field: Long, hashSet: LongHashSet) = hashSet.contains(field)
+
+	/**
+	 * Add a field into the hashSet, if isInLongHashSet returns false
+	 *
+	 * if you override this function you also have to override isInLongHashSet
+	 *
+	 * @return true if the field was really added
+	 */
+	def addToLongHashSet(field: Long, hashSet: LongHashSet) = hashSet += field
 
 	/**
 	 * @return all fields which are equal the provided field 
@@ -389,6 +388,14 @@ o o o o o o o
 		if(hashSet.contains(v270)) return true
 
 		false
+	}
+
+	override def addToLongHashSet(field: Long, hashSet: LongHashSet) = {
+		if (!isInLongHashSet(field, hashSet)) {
+			hashSet += field
+			true
+		} else
+			false
 	}
 
 	override def getEquivalentFields(field: Long) = {
