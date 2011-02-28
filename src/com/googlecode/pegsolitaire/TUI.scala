@@ -185,7 +185,7 @@ object TUI {
 			}
 			if(arg_select) {
 				println("Select one or more start fields:")
-				val selection = selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields))
+				val selection = selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
 				Time("Solve")(solitaire = new Solver(solitaireType, selection, reduceMemory, parallelize))
 			} else if(arg_full) {
 				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields, reduceMemory, parallelize))
@@ -317,7 +317,7 @@ object TUI {
 	def solutionBrowser(solitaire: Solver) {
 		while (true) {
 			println("\nSolution Browser: (x = peg, . = empty)")
-			var s = solitaire.getStart
+			var s = solitaire.getStart.toList
 			var f = s(0)
 			while (s.length != 0) {
 				println("Please choose a move: ")

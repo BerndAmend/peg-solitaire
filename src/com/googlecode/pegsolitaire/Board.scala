@@ -218,7 +218,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
-  private final def calculateRelatedFields(checkfield: Long, field: Long): List[Long] = {
+  private final def calculateRelatedFields(checkfield: Long, field: Long): Iterable[Long] = {
 		var result = List[Long]()
 		var i = 0
 		while (i < movemask.size) {
@@ -233,12 +233,12 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	/**
 	 * @return complete follower list
 	 */
-	final def calculateFollower(field: Long): List[Long] = calculateRelatedFields(field, field)
+	final def calculateFollower(field: Long): Iterable[Long] = calculateRelatedFields(field, field)
 
 	/**
 	 * @return complete predecessor list
 	 */
-	final def calculatePredecessor(field: Long): List[Long] = calculateRelatedFields(~field, field)
+	final def calculatePredecessor(field: Long): Iterable[Long] = calculateRelatedFields(~field, field)
 
 	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
     val result = calculateRelatedFields(checkfield, field)
@@ -281,7 +281,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	/**
 	 * @return all related fields that are in the solutions HashSet
 	 */
-	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
+	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): Iterable[Long] = {
 		var result = new LongHashSet
 		var i = 0
 		while (i < movemask.size) {
@@ -299,7 +299,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 		result
 	}
 
-	final def getFollower(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(field, field, searchSet)
+	final def getFollower(field: Long, searchSet: LongHashSet): Iterable[Long] = getRelatedFields(field, field, searchSet)
 
 	final def getPredecessor(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(~field, field, searchSet)
 

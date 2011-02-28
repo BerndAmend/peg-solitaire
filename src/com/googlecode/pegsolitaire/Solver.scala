@@ -178,12 +178,12 @@ class Solver(val game: Board) {
 		printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
 	}
 
-	protected def getCompleteList(solutionNumber: Int): List[Long] = game.getCompleteList(solution(solutionNumber))
+	protected def getCompleteList(solutionNumber: Int): Iterable[Long] = game.getCompleteList(solution(solutionNumber))
 
 	/**
 	 *  @return a list of all possible start-fields
 	 */
-	def getStart: List[Long] = getCompleteList(getStartNum)
+	def getStart: Iterable[Long] = getCompleteList(getStartNum)
 
 	/**
 	 * @return first non empty solution set id
@@ -203,7 +203,7 @@ class Solver(val game: Board) {
 	/**
 	 *  @return a list of all possible end-fields
 	 */
-	def getEnd: List[Long] = getCompleteList(getEndNum)
+	def getEnd: Iterable[Long] = getCompleteList(getEndNum)
 
 	/**
 	 * @return last non empty solution set id
@@ -223,7 +223,7 @@ class Solver(val game: Board) {
 	/**
 	 * @return all follower for a provided field
 	 */
-	def getFollower(field: Long): LongHashSet = {
+	def getFollower(field: Long): Iterable[Long] = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos + 1 >= game.length)
 			return new LongHashSet
@@ -237,7 +237,7 @@ class Solver(val game: Board) {
 	/**
 	 * @return all follower for a provided field
 	 */
-	def getPredecessorSet(field: Long): LongHashSet = {
+	def getPredecessorSet(field: Long): Iterable[Long] = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos - 1 <= 0)
 			return new LongHashSet
