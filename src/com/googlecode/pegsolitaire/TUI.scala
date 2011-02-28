@@ -191,7 +191,13 @@ object TUI {
 				Time("Solve")(solitaire = new Solver(solitaireType, solitaireType.possibleStartFields, reduceMemory, parallelize))
 			}
 		} else if(!arg_load.isEmpty) {
-			Time("Load")(solitaire = Solver.fromFile(arg_load))
+			try {
+				Time("Load")(solitaire = Solver.fromFile(arg_load))
+			} catch {
+				case _ =>
+					printlnError("error: couldn't load solution, abort")
+					return
+			}
 		} else {
 			printlnError("error: neither -board nor -load is specified, abort")
 			return
