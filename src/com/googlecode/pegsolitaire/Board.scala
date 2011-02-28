@@ -17,6 +17,8 @@
 
 package com.googlecode.pegsolitaire
 
+import scala.tools.nsc.Interpreter
+
 object MoveDirections extends Enumeration {
 	val Horizontal = Value("horizontal")
 	val Vertical = Value("vertical")
@@ -24,26 +26,28 @@ object MoveDirections extends Enumeration {
 	val RightDiagonal = Value("right diagonal /")
 }
 
-object GameType extends Enumeration {
-	val English = Value("english")
-	val European = Value("euro")
-	val Holes15 = Value("15holes")
-	val User = Value("user")
+/**
+ * Interface to the automatically generated Board Helper functions
+ */
+trait BoardHelper {
+	/**
+	 * check if a field is already in the hashSet
+	 *
+	 * @return true if a rotation/flipped version already exists in the hashSet
+	 */
+	def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean
+
+	/**
+	 * @return all fields which are equal the provided field
+	 */
+	def getEquivalentFields(field: Long): Iterable[Long]
 }
 
 /**
- * ToDo: auto-detect all possible rotated and flipped game-fields
- *
- * check usage of C/C++ using
- *  //#include <x86intrin.h>
- *  // sse: __m128 _mm_and_ps (__m128 __A, __m128 __B)
- *  // sse: __m128 _mm_xor_ps (__m128 __A, __m128 __B)
- *  // avx: __m256 _mm256_and_ps (__m256 __A, __m256 __B)
- *  // avx: __m256 _mm256_xor_ps (__m256 __A, __m256 __B)
  *
  * @author Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  */
-class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value], val gameType: GameType.Value = GameType.User) {
+class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value]) {
 
 	val length = boardDescription.length - boardDescription.replaceAll("o","").length
 
@@ -96,7 +100,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	}
 
 	/**
-	 * calculate the 3 required bit masks, to detect if a move is possible and to execute him
+	 * calculate the 3 required bit masks, to detect if a move is possible and to execute it
 	 * (m,_,_) => ...111... (movemask)
 	 * (_,m,_) => ...110... (checkmask1)
 	 * (_,_,m) => ...011... (checkmask2)
@@ -167,6 +171,9 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 			checkmaskArray1(i) = c1iter.next
 			checkmaskArray2(i) = c2iter.next
 
+			/**
+			 * check if the move masks are corrected
+			 */
 			require(java.lang.Long.bitCount(movemaskArray(i)) == 3)
 			require(java.lang.Long.bitCount(checkmaskArray1(i)) == 2)
 			require(java.lang.Long.bitCount(checkmaskArray2(i)) == 2)
@@ -184,6 +191,222 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	val movemask = masks._1     // ...111... required to mask bits effected by a move and execute the move
 	val checkmask1 = masks._2   // ...110... required to check if a move is possible
 	val checkmask2 = masks._3   // ...011... required to check if a move is possible
+
+	private final def applyMoves(checkfield: Long, field: Long)(func: Long => Unit): Unit = {
+  		var i = 0
+		while (i < movemask.size) {
+			val mask = movemask(i)
+			var tmp = checkfield & mask
+			if (tmp == checkmask1(i) || tmp == checkmask2(i))
+		        func(field ^ mask)
+			i += 1
+		}
+	}
+
+	private val interpreter = {
+		val settings = new scala.tools.nsc.Settings
+		settings.usejavacp.value = true
+		new scala.tools.nsc.Interpreter(settings)
+	}
+
+	private val boardHelper: BoardHelper = {
+		var result = new Array[BoardHelper](1)
+		interpreter.quietBind("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result)
+		var cmd: String = if (boardDescription ==""". . o o o . .
+. . o o o . .
+o o o o o o o
+o o o o o o o
+o o o o o o o
+. . o o o . .
+. . o o o . .""" && moveDirections.sameElements(Array(MoveDirections.Horizontal, MoveDirections.Vertical))) {
+			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
+				def isInLongHashSet(field: Long, hashSet: com.googlecode.pegsolitaire.LongHashSet): Boolean = {
+					if(hashSet.contains(field)) return true
+
+					val n90  = rotate90(field)
+					if(hashSet.contains(n90)) return true
+
+					val n180 = rotate180(field)
+					if(hashSet.contains(n180)) return true
+
+					val n270 = rotate270(field)
+					if(hashSet.contains(n270)) return true
+
+					val v    = vflip(field)
+					if(hashSet.contains(v)) return true
+
+					val v90  = vflip(n90)
+					if(hashSet.contains(v90)) return true
+
+					val v180 = vflip(n180)
+					if(hashSet.contains(v180)) return true
+
+					val v270 = vflip(n270)
+					if(hashSet.contains(v270)) return true
+
+					false
+				}
+
+				def getEquivalentFields(field: Long): Iterable[Long] = {
+					val output = new com.googlecode.pegsolitaire.LongHashSet(8)
+
+					val n    = field
+					val n90  = rotate90(n)
+					val n180 = rotate180(n)
+					val n270 = rotate270(n)
+
+					val v    = vflip(n)
+					val v90  = vflip(n90)
+					val v180 = vflip(n180)
+					val v270 = vflip(n270)
+
+					output += n
+					output += n90
+					output += n180
+					output += n270
+					output += v
+					output += v90
+					output += v180
+					output += v270
+					//output += hflip(n)
+					//output += hflip(n90)
+					//output += hflip(n180)
+					//output += hflip(n270)
+
+					output
+				}
+
+				/**
+				 *  memory structure
+				 *   0123456
+				 * 0   012
+				 * 1   345
+				 * 2 6789abc
+				 * 3 defghij
+				 * 4 klmnopq
+				 * 5   rst
+				 * 6   uvw
+				 *
+				 * output:
+				 *   0123456
+				 * 0   cjq
+				 * 1   bip
+				 * 2 25ahotw
+				 * 3 149gnsv
+				 * 4 038fmru
+				 * 5   7el
+				 * 6   6dk
+				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
+				 *  c  j  q  b  i  p  2  5  a  h  o  t  w  1  4  9  g  n  s  v  0  3  8 f m r u 7 e l 6 d k
+				 */
+				private def rotate90(field: Long): Long = (
+					((field & (1L << 32)) >> 20) | ((field & (1L << 31)) >> 12) | ((field & (1L << 30)) >>  4)
+				| ((field & (1L << 29)) >> 18) | ((field & (1L << 28)) >> 10) | ((field & (1L << 27)) >>  2)
+				| ((field & (1L << 26)) >> 24) | ((field & (1L << 25)) >> 20) | ((field & (1L << 24)) >> 14)
+				| ((field & (1L << 23)) >>  6) | ((field & (1L << 22)) <<  2) | ((field & (1L << 21)) <<  8)
+				| ((field & (1L << 20)) << 12) | ((field & (1L << 19)) >> 18) | ((field & (1L << 18)) >> 14)
+				| ((field & (1L << 17)) >>  8) |  (field & (1L << 16))        | ((field & (1L << 15)) <<  8)
+				| ((field & (1L << 14)) << 14) | ((field & (1L << 13)) << 18) | ((field & (1L << 12)) >> 12)
+				| ((field & (1L << 11)) >>  8) | ((field & (1L << 10)) >>  2) | ((field & (1L <<  9)) <<  6)
+				| ((field & (1L <<  8)) << 14) | ((field & (1L <<  7)) << 20) | ((field & (1L <<  6)) << 24)
+				| ((field & (1L <<  5)) <<  2) | ((field & (1L <<  4)) << 10) | ((field & (1L <<  3)) << 18)
+				| ((field & (1L <<  2)) <<  4) | ((field & (1L <<  1)) << 12) | ((field & (1L <<  0)) << 20)
+				)
+
+				private def rotate180(field: Long): Long = rotate90(rotate90(field))
+				private def rotate270(field: Long): Long = rotate90(rotate90(rotate90(field)))
+
+				/**
+				 * output 90:
+				 *   0123456
+				 * 0   210
+				 * 1   543
+				 * 2 cba9876
+				 * 3 jihgfed
+				 * 4 qponmlk
+				 * 5   tsr
+				 * 6   wvu
+				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
+				 *  2  1  0  5  4  3  c  b  a  9  8  7  6  j  i  h  g  f  e  d  q  p  o n m l k t s r w v u
+				 */
+				private def hflip(field: Long): Long = (
+					 ((field & (1L << 32)) >> 2) |  (field & (1L << 31))       | ((field & (1L << 30)) << 2)
+					|((field & (1L << 29)) >> 2) |  (field & (1L << 28))       | ((field & (1L << 27)) << 2)
+					|((field & (1L << 26)) >> 6) | ((field & (1L << 25)) >> 4) | ((field & (1L << 24)) >> 2)
+					| (field & (1L << 23))       | ((field & (1L << 22)) << 2) | ((field & (1L << 21)) << 4)
+					|((field & (1L << 20)) << 6) | ((field & (1L << 19)) >> 6) | ((field & (1L << 18)) >> 4)
+					|((field & (1L << 17)) >> 2) |  (field & (1L << 16))       | ((field & (1L << 15)) << 2)
+					|((field & (1L << 14)) << 4) | ((field & (1L << 13)) << 6) | ((field & (1L << 12)) >> 6)
+					|((field & (1L << 11)) >> 4) | ((field & (1L << 10)) >> 2) |  (field & (1L <<  9))
+					|((field & (1L <<  8)) << 2) | ((field & (1L <<  7)) << 4) | ((field & (1L <<  6)) << 6)
+					|((field & (1L <<  5)) >> 2) |  (field & (1L <<  4))       | ((field & (1L <<  3)) << 2)
+					|((field & (1L <<  2)) >> 2) |  (field & (1L <<  1))       | ((field & (1L <<  0)) << 2)
+					)
+
+				/**
+				 *  memory structure
+				 *   0123456
+				 * 0   012
+				 * 1   345
+				 * 2 6789abc
+				 * 3 defghij
+				 * 4 klmnopq
+				 * 5   rst
+				 * 6   uvw
+				 *
+				 * output:
+				 *   0123456
+				 * 0   uvw
+				 * 1   rst
+				 * 2 klmnopq
+				 * 3 defghij
+				 * 4 6789abc
+				 * 5   345
+				 * 6   012
+				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
+				 *  u  v  w  r  s  t  k  l  m  n  o  p  q  d  e  f  g  h  i  j  6  7  8 9 a b c 3 4 5 0 1 2
+				 */
+				private def vflip(field: Long): Long = (
+					  (field & (1L << 32 | 1L << 31 | 1L << 30)) >> 30
+					| (field & (1L << 29 | 1L << 28 | 1L << 27)) >> 24
+					| (field & (1L << 26 | 1L << 25 | 1L << 24 | 1L << 23 | 1L << 22 | 1L << 21 | 1L << 20)) >> 14
+					| (field & (1L << 19 | 1L << 18 | 1L << 17 | 1L << 16 | 1L << 15 | 1L << 14 | 1L << 13))
+					| (field & (1L << 12 | 1L << 11 | 1L << 10 | 1L <<  9 | 1L <<  8 | 1L <<  7 | 1L <<  6)) << 14
+					| (field & (1L <<  5 | 1L <<  4 | 1L <<  3)) << 24
+					| (field & (1L <<  2 | 1L <<  1 | 1L <<  0)) << 30
+					)
+
+					// TODO: generate -- priority
+					//  vertical flip
+					//  rotate90
+					//  rotate180
+					//  rotate270
+					//  horizontal flip
+
+			}"""
+		} else {
+			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
+					def isInLongHashSet(field: Long, hashSet: com.googlecode.pegsolitaire.LongHashSet) = hashSet.contains(field)
+					def getEquivalentFields(field: Long): Iterable[Long] = List(field)
+			}"""
+		}
+		interpreter.interpret(cmd)
+		result(0)
+	}
+
+	{ // verify that the BoardHelper ist correct
+		movemask foreach {
+			mask =>
+			// check if all getEquivalentFields are valid moves
+			boardHelper.getEquivalentFields(mask) foreach (v => require(movemask.contains(v)))
+
+			// check if the mask is in the getEquivalentFields list
+			require(boardHelper.getEquivalentFields(mask).toList.contains(mask))
+		}
+	}
 
 	lazy val possibleStartFields = {
 		val hashSet = new LongHashSet
@@ -204,11 +427,8 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	def toString(field: Long): String = {
 		var output = printMask
 
-		var i = length - 1
-		do {
+		for(i <- (length-1).to(0,-1) )
 			output = output.replaceFirst("P", (if ((field & (1L << i)) == 0) "." else "x"))
-			i -= 1
-		} while (i >= 0)
 
 		output
 	}
@@ -220,13 +440,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 
   private final def calculateRelatedFields(checkfield: Long, field: Long): Iterable[Long] = {
 		var result = List[Long]()
-		var i = 0
-		while (i < movemask.size) {
-			var tmp = checkfield & movemask(i)
-			if (tmp == checkmask1(i) || tmp == checkmask2(i))
-        result ::= field ^ movemask(i)
-			i += 1
-		}
+		applyMoves(checkfield, field) { result ::= _ }
     result
 	}
 
@@ -261,16 +475,7 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	 * return true if field has a follower in the solutions HashSet
 	 */
 	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-		var i = 0
-		while (i < movemask.size) {
-			var tmp = checkfield & movemask(i)
-			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
-				if (isInLongHashSet(field ^ movemask(i), solutions))
-					return true
-
-			}
-			i += 1
-		}
+		applyMoves(checkfield, field) { n => if (boardHelper.isInLongHashSet(n, solutions)) return true }
 		false
 	}
 
@@ -283,298 +488,33 @@ class Board(val boardDescription: String, val moveDirections: Array[MoveDirectio
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): Iterable[Long] = {
 		var result = new LongHashSet
-		var i = 0
-		while (i < movemask.size) {
-			var tmp = checkfield & movemask(i)
-			if (tmp == checkmask1(i) || tmp == checkmask2(i)) {
-				val n = field ^ movemask(i)
-
-				if (isInLongHashSet(n, searchSet))
-					result += n
-			}
-
-			i += 1
-		}
-
+		applyMoves(checkfield, field) { n => if (boardHelper.isInLongHashSet(n, searchSet)) result += n}
 		result
 	}
 
 	final def getFollower(field: Long, searchSet: LongHashSet): Iterable[Long] = getRelatedFields(field, field, searchSet)
 
-	final def getPredecessor(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(~field, field, searchSet)
-
-	/**
-	 * check if a field is already in the hashSet
-	 * to reduce memory constraints derived classes should
-	 *
-	 * if you override this function you also have to override addToLongHashSet
-	 *
-	 * @return true if a rotation/flipped version already exists in the hashSet
-	 */
-	def isInLongHashSet(field: Long, hashSet: LongHashSet) = hashSet.contains(field)
+	final def getPredecessor(field: Long, searchSet: LongHashSet): Iterable[Long] = getRelatedFields(~field, field, searchSet)
 
 	/**
 	 * Add a field into the hashSet, if isInLongHashSet returns false
 	 *
-	 * if you override this function you also have to override isInLongHashSet
-	 *
 	 * @return true if the field was really added
 	 */
-	def addToLongHashSet(field: Long, hashSet: LongHashSet) = hashSet += field
-
-	/**
-	 * @return all fields which are equal the provided field 
-	 */
-	def getEquivalentFields(field: Long) = List(field)
-
-	/**
-	 * @return a complete list with all equivalent fields for the fields HashSet
-	 */
-	def getCompleteList(fields: LongHashSet): List[Long] = {
-		val output = new LongHashSet
-
-		val iter = fields.iterator
-		while(iter.hasNext)
-			output += getEquivalentFields(iter.next)
-
-		output.toList
-	}
-
-	/**
-	 * @return a complete list with all equivalent fields for the fields HashSet
-	 */
-	def getCompleteList(fields: Iterable[Long]): List[Long] = {
-		val output = new LongHashSet
-
-		val iter = fields.iterator
-		while(iter.hasNext)
-			output += getEquivalentFields(iter.next)
-
-		output.toList
-	}
-}
-
-object EnglishBoard extends Board(
-""". . o o o . .
-. . o o o . .
-o o o o o o o
-o o o o o o o
-o o o o o o o
-. . o o o . .
-. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.English) {
-
-	override def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean = {
-		if(hashSet.contains(field)) return true
-
-		val n90  = rotate90(field)
-		if(hashSet.contains(n90)) return true
-
-		val n180 = rotate90(n90)
-		if(hashSet.contains(n180)) return true
-
-		val n270 = rotate90(n180)
-		if(hashSet.contains(n270)) return true
-
-		val v    = vflip(field)
-		if(hashSet.contains(v)) return true
-
-		val v90  = vflip(n90)
-		if(hashSet.contains(v90)) return true
-
-		val v180 = vflip(n180)
-		if(hashSet.contains(v180)) return true
-
-		val v270 = vflip(n270)
-		if(hashSet.contains(v270)) return true
-
-		false
-	}
-
-	override def addToLongHashSet(field: Long, hashSet: LongHashSet) = {
-		if (!isInLongHashSet(field, hashSet)) {
+	 def addToLongHashSet(field: Long, hashSet: LongHashSet): Boolean = {
+		if (!boardHelper.isInLongHashSet(field, hashSet)) {
 			hashSet += field
 			true
 		} else
 			false
 	}
 
-	override def getEquivalentFields(field: Long) = {
+	/**
+	 * @return a complete list with all equivalent fields for the fields HashSet
+	 */
+	def getCompleteList(fields: Iterable[Long]): Iterable[Long] = {
 		val output = new LongHashSet
-
-		val n    = field
-		val n90  = rotate90(n)
-		val n180 = rotate90(n90)
-		val n270 = rotate90(n180)
-
-		output += n
-		output += n90
-		output += n180
-		output += n270
-		output += vflip(n)
-		output += vflip(n90)
-		output += vflip(n180)
-		output += vflip(n270)
-
-		output.toList
-	}
-
-	/**
-	 * memory structure
-	 *   0123456
-	 * 0   012
-	 * 1   345
-	 * 2 6789abc
-	 * 3 defghij
-	 * 4 klmnopq
-	 * 5   rst
-	 * 6   uvw
-	 *
-	 * output:
-	 *   0123456
-	 * 0   cjq
-	 * 1   bip
-	 * 2 25ahotw
-	 * 3 149gnsv
-	 * 4 038fmru
-	 * 5   7el
-	 * 6   6dk
-	 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-	 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
-	 *  c  j  q  b  i  p  2  5  a  h  o  t  w  1  4  9  g  n  s  v  0  3  8 f m r u 7 e l 6 d k
-	 */
-	def rotate90(field: Long): Long = {
-		var result = 0L
-		if ((field & (1L << 32)) != 0) result |= 1L << 12
-		if ((field & (1L << 31)) != 0) result |= 1L << 19
-		if ((field & (1L << 30)) != 0) result |= 1L << 26
-
-		if ((field & (1L << 29)) != 0) result |= 1L << 11
-		if ((field & (1L << 28)) != 0) result |= 1L << 18
-		if ((field & (1L << 27)) != 0) result |= 1L << 25
-
-		if ((field & (1L << 26)) != 0) result |= 1L << 2
-		if ((field & (1L << 25)) != 0) result |= 1L << 5
-		if ((field & (1L << 24)) != 0) result |= 1L << 10
-		if ((field & (1L << 23)) != 0) result |= 1L << 17
-		if ((field & (1L << 22)) != 0) result |= 1L << 24
-		if ((field & (1L << 21)) != 0) result |= 1L << 29
-		if ((field & (1L << 20)) != 0) result |= 1L << 32
-
-		if ((field & (1L << 19)) != 0) result |= 1L << 1
-		if ((field & (1L << 18)) != 0) result |= 1L << 4
-		if ((field & (1L << 17)) != 0) result |= 1L << 9
-		result |= (field & (1L << 16))
-		if ((field & (1L << 15)) != 0) result |= 1L << 23
-		if ((field & (1L << 14)) != 0) result |= 1L << 28
-		if ((field & (1L << 13)) != 0) result |= 1L << 31
-
-		if ((field & (1L << 12)) != 0) result |= 1L << 0
-		if ((field & (1L << 11)) != 0) result |= 1L << 3
-		if ((field & (1L << 10)) != 0) result |= 1L << 8
-		if ((field & (1L << 9)) != 0) result |= 1L << 15
-		if ((field & (1L << 8)) != 0) result |= 1L << 22
-		if ((field & (1L << 7)) != 0) result |= 1L << 27
-		if ((field & (1L << 6)) != 0) result |= 1L << 30
-
-		if ((field & (1L << 5)) != 0) result |= 1L << 7
-		if ((field & (1L << 4)) != 0) result |= 1L << 14
-		if ((field & (1L << 3)) != 0) result |= 1L << 21
-
-		if ((field & (1L << 2)) != 0) result |= 1L << 6
-		if ((field & (1L << 1)) != 0) result |= 1L << 13
-		if ((field & (1L << 0)) != 0) result |= 1L << 20
-
-		result
-	}
-
-	/**
-	 * output 90:
-	 *   0123456
-	 * 0   210
-	 * 1   543
-	 * 2 cba9876
-	 * 3 jihgfed
-	 * 4 qponmlk
-	 * 5   tsr
-	 * 6   wvu
-	 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-	 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
-	 *  2  1  0  5  4  3  c  b  a  9  8  7  6  j  i  h  g  f  e  d  q  p  o n m l k t s r w v u
-	 */
-	def vflip(field: Long): Long = {
-		var result = 0L
-		if ((field & (1L << 32)) != 0) result |= 1L << 30
-		result |= (field & (1L << 31))
-		if ((field & (1L << 30)) != 0) result |= 1L << 32
-
-		if ((field & (1L << 29)) != 0) result |= 1L << 27
-		result |= (field & (1L << 28))
-		if ((field & (1L << 27)) != 0) result |= 1L << 29
-
-		if ((field & (1L << 26)) != 0) result |= 1L << 20
-		if ((field & (1L << 25)) != 0) result |= 1L << 21
-		if ((field & (1L << 24)) != 0) result |= 1L << 22
-		result |= (field & (1L << 23))
-		if ((field & (1L << 22)) != 0) result |= 1L << 24
-		if ((field & (1L << 21)) != 0) result |= 1L << 25
-		if ((field & (1L << 20)) != 0) result |= 1L << 26
-
-		if ((field & (1L << 19)) != 0) result |= 1L << 13
-		if ((field & (1L << 18)) != 0) result |= 1L << 14
-		if ((field & (1L << 17)) != 0) result |= 1L << 15
-		result |= (field & (1L << 16))
-		if ((field & (1L << 15)) != 0) result |= 1L << 17
-		if ((field & (1L << 14)) != 0) result |= 1L << 18
-		if ((field & (1L << 13)) != 0) result |= 1L << 19
-
-		if ((field & (1L << 12)) != 0) result |= 1L << 6
-		if ((field & (1L << 11)) != 0) result |= 1L << 7
-		if ((field & (1L << 10)) != 0) result |= 1L << 8
-		result |= (field & (1L << 9))
-		if ((field & (1L << 8)) != 0) result |= 1L << 10
-		if ((field & (1L << 7)) != 0) result |= 1L << 11
-		if ((field & (1L << 6)) != 0) result |= 1L << 12
-
-		if ((field & (1L << 5)) != 0) result |= 1L << 3
-		result |= (field & (1L << 4))
-		if ((field & (1L << 3)) != 0) result |= 1L << 5
-
-		if ((field & (1L << 2)) != 0) result |= 1L << 0
-		result |= (field & (1L << 1))
-		if ((field & (1L << 0)) != 0) result |= 1L << 2
-
-		result
-	}
-
-
-	for (i <- 0 until movemask.size) {
-		// check rotate
-		require(movemask(i) == rotate90(rotate90(rotate90(rotate90(movemask(i))))))
-		require(checkmask1(i) == rotate90(rotate90(rotate90(rotate90(checkmask1(i))))))
-		require(checkmask2(i) == rotate90(rotate90(rotate90(rotate90(checkmask2(i))))))
-
-		// check vflip
-		require(movemask(i) == vflip(vflip(movemask(i))))
-		require(checkmask1(i) == vflip(vflip(checkmask1(i))))
-		require(checkmask2(i) == vflip(vflip(checkmask2(i))))
+		fields foreach ( output += boardHelper.getEquivalentFields(_) )
+		output
 	}
 }
-
-/**
- * ToDo implement rotate
- */
-object EuropeanBoard extends Board(
-""". . o o o . .
-. o o o o o .
-o o o o o o o
-o o o o o o o
-o o o o o o o
-. o o o o o .
-. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical), GameType.European)
-
-object Board15Holes extends Board (
-"""o . . . .
-o o . . .
-o o o . .
-o o o o .
-o o o o o""", Array(MoveDirections.Horizontal, MoveDirections.Vertical, MoveDirections.LeftDiagonal), GameType. Holes15)

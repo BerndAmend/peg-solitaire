@@ -64,7 +64,7 @@ object TUI {
 		var arg_browse = false
 
 		var arg_board = false
-		var selectedGame = GameType.English
+		var selectedGame = Boards.English
 		var reduceMemory = false
 		var parallelize = true
 
@@ -93,7 +93,7 @@ object TUI {
 				case "-board" =>
 					i += checkForArguments("-board")
 					try {
-						selectedGame = GameType.withName(args(i))
+						selectedGame = Boards.withName(args(i))
 					} catch {
 						case _ => printlnError("error: unknown board type, exit")
 											return
@@ -138,12 +138,10 @@ object TUI {
 
 		if(arg_board) {
 			val solitaireType = selectedGame match {
-				case GameType.English =>
-					printlnColoredText("All numbers are without equivalent fields.", Color.blue)
-					EnglishBoard
-				case GameType.European => EuropeanBoard
-				case GameType.Holes15 => Board15Holes
-				case GameType.User =>
+				case Boards.English => Boards.EnglishBoard
+				case Boards.European => Boards.EuropeanBoard
+				case Boards.Holes15 => Boards.Holes15Board
+				case Boards.User =>
 					println("Examples:")
 					println("15 holes board:\n\no . . . .\no o . . .\no o o . .\no o o o .\no o o o o\n")
 					println("Simple board:\n\n. o o o o .\no o o o o o\no o . . o o\no o . . o o\no o o o o o\n. o o o o .\n")

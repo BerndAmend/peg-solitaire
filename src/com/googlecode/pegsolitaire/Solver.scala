@@ -19,6 +19,38 @@ package com.googlecode.pegsolitaire
 import Helper._
 import scala.concurrent.ops._
 
+object Boards extends Enumeration {
+	val English = Value("english")
+	val European = Value("euro")
+	val Holes15 = Value("15holes")
+	val User = Value("user")
+
+	object EnglishBoard extends Board(
+""". . o o o . .
+. . o o o . .
+o o o o o o o
+o o o o o o o
+o o o o o o o
+. . o o o . .
+. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
+
+	object EuropeanBoard extends Board(
+""". . o o o . .
+. o o o o o .
+o o o o o o o
+o o o o o o o
+o o o o o o o
+. o o o o o .
+. . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
+
+	object Holes15Board extends Board(
+"""o . . . .
+o o . . .
+o o o . .
+o o o o .
+o o o o o""", Array(MoveDirections.Horizontal, MoveDirections.Vertical, MoveDirections.LeftDiagonal))
+}
+
 object Solver {
 
 	/**
@@ -26,10 +58,15 @@ object Solver {
 	 *
 	 * Description of the used file
 	 * <version: Int>
-	 * <type: Int>
+	 * <type: Int | only in version 1>
 	 * <Possible Moves count: Int><Possible Moves: repeated Int> # only available in user mode
 	 * <boardDescription length><boardDescription: repeated Char> # only available in user mode
 	 * <number of bits set:Int><number of values: Int><values: repeated Long>: repeated until eof
+	 *
+	 * Version changes
+	 *   1: Initial version
+	 *   2: All fields are handled as User defined fields, since equal fields are now detected for all games.
+	 *      Due to this change it is not possible to correctly load new results with an old program version.
 	 */
 	def fromFile(filename: String): Solver = {
 		var output: Solver = null
@@ -49,17 +86,26 @@ object Solver {
 			// read version
 			val version = in.readInt
 
-			if(version != 1)
-				throw new Exception("unsupported version")
-
-			val boardType = GameType(in.readInt)
+			var boardType = Boards.User
+			var deleteDuplicateFields = false
+			version match {
+				case 1 =>
+					boardType = Boards(in.readInt)
+					if(boardType != Boards.English) {
+						println("Old file version. To save memory it is recommended to load and save the database.")
+						deleteDuplicateFields = true
+					}
+				case 2 =>
+				case _ =>
+			    throw new Exception("unsupported version")
+			}
 
 			// read and create game
 			boardType match {
-				case GameType.English => output = new Solver(EnglishBoard)
-				case GameType.European => output = new Solver(EuropeanBoard)
-				case GameType.Holes15 => output = new Solver(Board15Holes)
-				case GameType.User =>
+				case Boards.English => output = new Solver(Boards.EnglishBoard)
+				case Boards.European => output = new Solver(Boards.EuropeanBoard)
+				case Boards.Holes15 => output = new Solver(Boards.Holes15Board)
+				case Boards.User =>
 					val possibleMoves = new Array[MoveDirections.Value](in.readInt)
 
 					for(i <- 0 until possibleMoves.size)
@@ -86,9 +132,9 @@ object Solver {
 
 				if (run) {
 					if (i < 0)
-						throw new Exception("i=" + i + " is lower than 0")
+						throw new Exception("file corruption detected, number of pegs is lower than 0")
 					if (i >= output.solution.length)
-						throw new Exception("i=" + i + " is higher or equal " + output.solution.length)
+						throw new Exception("file corruption detected, number of pegs is highter than the field size")
 
 					val size = in.readInt
 
@@ -96,16 +142,20 @@ object Solver {
 
 					output.solution(i) = newLongHashSet
 
-					var pos = 0
-					while (pos < size) {
+					val requiredNumberOfBitsSet = output.game.length-i
+
+					for( pos <- 0 until size) {
 						val n = in.readLong
-						if((output.game.length-java.lang.Long.bitCount(n)) == i) {
-							newLongHashSet += n
+						if(java.lang.Long.bitCount(n) == requiredNumberOfBitsSet) {
+								if(deleteDuplicateFields) // no performance penalty by doing this inside the loop
+									output.game.addToLongHashSet(n, newLongHashSet)
+								else
+									newLongHashSet += n
 						} else {
-							printlnError("error: ignore invalid entry (" + n + ")")
+							throw new Exception("file corruption detected, invalid field")
 						}
-							pos += 1
 					}
+
 				}
 			}
 		} finally {
@@ -257,19 +307,16 @@ class Solver(val game: Board) {
 						new java.io.BufferedOutputStream(
 							new java.io.FileOutputStream(filename))))
 
-		out.writeInt(1) // version
-		out.writeInt(game.gameType.id) // type
+		out.writeInt(2) // version
 
-		if(game.gameType == GameType.User) {
-			// move directions
-			out.writeInt(game.moveDirections.length)
-			for(i <- game.moveDirections)
-				out.writeInt(i.id)
-			// board description
-			out.writeInt(game.boardDescription.length)
-			for(i <- game.boardDescription)
-				out.writeChar(i)
-		}
+		// move directions
+		out.writeInt(game.moveDirections.length)
+		for(i <- game.moveDirections)
+			out.writeInt(i.id)
+		// board description
+		out.writeInt(game.boardDescription.length)
+		for(i <- game.boardDescription)
+			out.writeChar(i)
 
 		try {
 			for(i <- 0 until game.length) {
@@ -296,9 +343,7 @@ class Solver(val game: Board) {
 		var current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
 		// init the current with BigDecimal = 1
-		val iter = solution(game.length-1).iterator
-		while(iter.hasNext)
-			game.getEquivalentFields(iter.next) foreach {v => current(v) = 1 }
+		game.getCompleteList(solution(game.length-1)) foreach {v => current(v) = 1 }
 
 		for (i <- (game.length - 2).to(1, -1)) {
 			print("  determine values for " + i + " removed pegs\r")
@@ -307,9 +352,7 @@ class Solver(val game: Board) {
 			previous = current
 			current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
-			val iter = solution(i).iterator
-			while(iter.hasNext)
-				game.getEquivalentFields(iter.next) foreach {
+			game.getCompleteList(solution(i)) foreach {
 					v =>
 						val viter = getFollower(v).iterator
 						while(viter.hasNext) {
