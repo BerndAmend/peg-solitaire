@@ -193,13 +193,11 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	val checkmask2 = masks._3   // ...011... required to check if a move is possible
 
 	private final def applyMoves(checkfield: Long, field: Long)(func: Long => Unit): Unit = {
-  		var i = 0
-		while (i < movemask.size) {
+		for (i <- 0 until movemask.size) {
 			val mask = movemask(i)
 			var tmp = checkfield & mask
 			if (tmp == checkmask1(i) || tmp == checkmask2(i))
 		        func(field ^ mask)
-			i += 1
 		}
 	}
 
