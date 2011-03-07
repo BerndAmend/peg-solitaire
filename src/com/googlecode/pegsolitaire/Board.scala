@@ -47,7 +47,7 @@ trait BoardHelper {
  *
  * @author Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  */
-class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value]) {
+final class Board(val boardDescription: String, val moveDirections: Array[MoveDirections.Value]) {
 
 	val length = boardDescription.length - boardDescription.replaceAll("o","").length
 
