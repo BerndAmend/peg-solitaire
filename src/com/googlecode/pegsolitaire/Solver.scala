@@ -25,7 +25,7 @@ object Boards extends Enumeration {
 	val Holes15 = Value("15holes")
 	val User = Value("user")
 
-	object EnglishBoard extends Board(
+	val EnglishBoard = new Board(
 """. . o o o . .
 . . o o o . .
 o o o o o o o
@@ -34,7 +34,7 @@ o o o o o o o
 . . o o o . .
 . . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
 
-	object EuropeanBoard extends Board(
+	val EuropeanBoard = new Board(
 """. . o o o . .
 . o o o o o .
 o o o o o o o
@@ -43,7 +43,7 @@ o o o o o o o
 . o o o o o .
 . . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
 
-	object Holes15Board extends Board(
+	val Holes15Board = new Board(
 """o . . . .
 o o . . .
 o o o . .
@@ -167,65 +167,53 @@ object Solver {
 
 }
 
-class Solver(val game: Board) {
+class Solver(val game: Board, val parallelProcessing: Boolean) {
 
 	/**
 	 *  solution(0) is unused
 	 */
-	val solution = new Array[LongHashSet](game.length)
+	val solution = Array.fill(game.length)(new LongHashSet)
 
 	/**
 	 * used to count in the ctor the dead ends
 	 */
 	private val deadends = Array.fill[Long](game.length)(0L)
 
-	def this(game: Board, startFields: Iterable[Long], reduceMemory: Boolean = false, parallelProcessing: Boolean = false) {
-		this(game)
+	def this(game: Board) = this(game, true)
+
+	def this(game: Board, startFields: Iterable[Long], parallelProcessing: Boolean = true) {
+		this(game, parallelProcessing)
 
 		for(e <- startFields) {
 			val bc = game.length - java.lang.Long.bitCount(e)
 			if(bc <= 0)
 				throw new Exception("Invalid number of bits set (" + e.toString + ")")
 
-			if(solution(bc) == null)
-				solution(bc) = new LongHashSet
-
 			solution(bc) add e
 		}
 
-		if(parallelProcessing) {
-			if(reduceMemory) {
-				for (sol <- (getStartNum+1) until game.length)
-					if(calculateForward(sol))
-						cleanBackwardParallel(getEndNum-1)
-			} else {
-				for (sol <- (getStartNum+1) until game.length)
-					calculateForward(sol)
 
-				cleanBackwardParallel(getEndNum-1)
+		Time("Solve") {
+			for (sol <- (getStartNum+1) until game.length) {
+				printColoredText("search fields with " + sol + " removed pegs", Color.green)
+				calculateForward(sol)
+				printColoredText(", found " + solution(sol).size + " fields", Color.green)
+				printDepthDebug(solution(sol))
 			}
-		} else {
-			if(reduceMemory) {
-				for (sol <- (getStartNum+1) until game.length)
-					if(calculateForward(sol))
-						cleanBackward(getEndNum-1)
-			} else {
-				for (sol <- (getStartNum+1) until game.length)
-					calculateForward(sol)
+		}
+		
+		println()
 
-				cleanBackward(getEndNum-1)
+		// cleaning the gamefield after every step is useless
+		Time("Solve") {
+			if(parallelProcessing) {
+				cleanBackwardParallel(getEndNum)
+			} else {
+				cleanBackward(getEndNum)
 			}
 		}
 
-		println("\nFields without a 1 peg solution")
-		var count = 0L
-		for(i <- 0 until deadends.length) {
-			if(deadends(i) > 0L) {
-				println("  There are " + deadends(i) + " with " + i + " removed pegs")
-				count += deadends(i)
-			}
-		}
-		printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
+		printlnColoredText("There are " + deadends.sum + " fields which doesn't result in a 1 peg solution", Color.blue)
 	}
 
 	protected def getCompleteList(solutionNumber: Int): Iterable[Long] = game.getCompleteList(solution(solutionNumber))
@@ -291,11 +279,7 @@ class Solver(val game: Board) {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos - 1 <= 0)
 			return new LongHashSet
-		val previous = solution(fieldPos - 1)
-		if(previous == null)
-			return new LongHashSet
-
-		game.getPredecessor(field, previous)
+		game.getPredecessor(field, solution(fieldPos - 1))
 	}
 
 	/**
@@ -323,9 +307,7 @@ class Solver(val game: Board) {
 				if(solution(i) != null && solution(i).size > 0) {
 					out.writeInt(i)
 					out.writeInt(solution(i).size)
-					val iter = solution(i).iterator
-					while(iter.hasNext)
-						out.writeLong(iter.next)
+					solution(i) foreach { out.writeLong(_) }
 				}
 			}
 		} finally {
@@ -354,9 +336,8 @@ class Solver(val game: Board) {
 
 			game.getCompleteList(solution(i)) foreach {
 					v =>
-						val viter = getFollower(v).iterator
-						while(viter.hasNext) {
-							val f = viter.next
+						getFollower(v) foreach {
+							f =>
 							try {
 								current(v) += previous(f)
 							} catch {
@@ -373,73 +354,10 @@ class Solver(val game: Board) {
 		count
 	}
 
-	private def printDepthDebug(current: LongHashSet) = if(enableDebug) printlnDebug(" " + current.depth) else println()
+	private def printDepthDebug(current: LongHashSet): Unit = printlnlnDebug(" " + current.depth)
 
-	/**
-	 * Forward propagation
-	 */
-	private def calculateForward(sol: Int): Boolean = {
-		printColoredText("search fields with " + sol + " removed pegs", Color.green)
-
-		if(solution(sol) == null)
-			solution(sol) = new LongHashSet
-
-		var deadEndFields = 0L
-		val current = solution(sol)
-		val iter = solution(sol - 1).iterator
-		while(iter.hasNext) {
-			if (!game.addFollower(iter.next, current)) {
-				deadEndFields += 1L
-				iter.remove
-			}
-		}
-
-		printColoredText(", found " + current.size + " fields", Color.green)
-		printDepthDebug(current)
-
-		if (deadEndFields > 0L) {
-			solution(sol-1).shrink
-			deadends(sol-1) += deadEndFields // update dead end counter
-
-			print("  clean field list with " + (sol - 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol - 1).size)
-			printDepthDebug(solution(sol - 1))
-		}
-
-		deadEndFields > 0L
-	}
-
-	/**
-	 * untested
-	 */
-	private def calculateBackward(sol: Int): Boolean = {
-		printColoredText("search fields with " + sol + " removed pegs", Color.green)
-
-		if(solution(sol) == null)
-			solution(sol) = new LongHashSet
-
-		var deadEndFields = 0L
-		val current = solution(sol)
-		val iter = solution(sol + 1).iterator
-		while(iter.hasNext) {
-			if (!game.addFollower(iter.next, current)) {
-				deadEndFields += 1L
-				iter.remove
-			}
-		}
-
-		printColoredText(", found " + current.size + " fields", Color.green)
-		printDepthDebug(current)
-
-		if (deadEndFields > 0L) {
-			solution(sol+1).shrink
-			deadends(sol+1) += deadEndFields // update dead end counter
-
-			print("  clean field list with " + (sol + 1) + " removed pegs: dead ends = " + deadEndFields + "  currently valid = " + solution(sol + 1).size)
-			printDepthDebug(solution(sol + 1))
-		}
-
-		deadEndFields > 0L
-	}
+	private def calculateForward (sol: Int): Unit = solution(sol - 1) foreach { game.addFollower(_, solution(sol)) }
+	private def calculateBackward(sol: Int): Unit = solution(sol + 1) foreach { game.addPredecessor(_, solution(sol)) }
 
 	/**
 	 * untested
@@ -447,20 +365,16 @@ class Solver(val game: Board) {
 	private def cleanForward(pos: Int) {
 		for (i <- pos until getEndNum) {
 
-			var deadEndFields = 0L
 			val current = solution(i-1)
-			val iter = solution(i).iterator
-			while(iter.hasNext) {
-				if (!game.hasPredecessor(iter.next, current)) {
-					deadEndFields += 1L
-					iter.remove
-				}
-			}
+			val newsol = new LongHashSet()
+			solution(i) foreach { elem => if (game.hasPredecessor(elem, current))	newsol += elem }
 
-			if (deadEndFields > 0L) {
+			if (solution(i).size != newsol.size) {
+				val deadEndFields = solution(i).size - newsol.size
 				deadends(i) += deadEndFields // update dead end counter
-				solution(i).shrink
-				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				solution(i) = newsol
+
+				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
 				printDepthDebug(solution(i))
 
 			} else {
@@ -472,20 +386,16 @@ class Solver(val game: Board) {
 	private def cleanBackward(pos: Int) {
 		for (i <- (pos-1).until(getStartNum, -1)) {
 
-			var deadEndFields = 0L
 			val current = solution(i+1)
-			val iter = solution(i).iterator
-			while(iter.hasNext) {
-				if (!game.hasFollower(iter.next, current)) {
-					deadEndFields += 1L
-					iter.remove
-				}
-			}
+			val newsol = new LongHashSet()
+			solution(i) foreach { elem => if (game.hasFollower(elem, current)) newsol += elem	}
 
-			if (deadEndFields > 0L) {
+			if (solution(i).size != newsol.size) {
+				val deadEndFields = solution(i).size - newsol.size
 				deadends(i) += deadEndFields // update dead end counter
-				solution(i).shrink
-				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				solution(i) = newsol
+
+				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
 				printDepthDebug(solution(i))
 			} else {
 				return
@@ -532,7 +442,7 @@ class Solver(val game: Board) {
 			deadends(i) += deadEndFields
 
 			if (deadEndFields > 0L) {
-				print("  clean field list with " + i + " removed pegs: dead ends = " + deadEndFields + "  left = " + solution(i).size)
+				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
 				printDepthDebug(solution(i))
 			} else {
 				return
@@ -541,4 +451,3 @@ class Solver(val game: Board) {
 	}
 
 }
-
