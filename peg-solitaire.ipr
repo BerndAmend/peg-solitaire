@@ -11,6 +11,8 @@
         <element id="directory" name="META-INF">
           <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
         </element>
+        <element id="extracted-dir" path="/usr/share/scala/lib/scala-library.jar" path-in-jar="/" />
+        <element id="extracted-dir" path="/usr/share/scala/lib/scala-compiler.jar" path-in-jar="/" />
       </root>
     </artifact>
   </component>
@@ -70,6 +72,10 @@
   <component name="EntryPointsManager">
     <entry_points version="2.0" />
   </component>
+  <component name="HighlightingAdvisor">
+    <option name="SUGGEST_TYPE_AWARE_HIGHLIGHTING" value="false" />
+    <option name="TYPE_AWARE_HIGHLIGHTING_ENABLED" value="true" />
+  </component>
   <component name="InspectionProjectProfileManager">
     <profiles>
       <profile version="1.0" is_locked="false">
@@ -109,6 +115,24 @@
     <option name="HEAP_SIZE" />
     <option name="LOCALE" />
     <option name="OPEN_IN_BROWSER" value="true" />
+  </component>
+  <component name="NullableNotNullManager">
+    <option name="myDefaultNullable" value="org.jetbrains.annotations.Nullable" />
+    <option name="myDefaultNotNull" value="org.jetbrains.annotations.NotNull" />
+    <option name="myNullables">
+      <value>
+        <list size="0" />
+      </value>
+    </option>
+    <option name="myNotNulls">
+      <value>
+        <list size="3">
+          <item index="0" class="java.lang.String" itemvalue="org.jetbrains.annotations.NotNull" />
+          <item index="1" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
+          <item index="2" class="java.lang.String" itemvalue="edu.umd.cs.findbugs.annotations.NonNull" />
+        </list>
+      </value>
+    </option>
   </component>
   <component name="Palette2">
     <group name="Swing">
@@ -242,6 +266,9 @@
       <module fileurl="file://$PROJECT_DIR$/peg-solitaire.iml" filepath="$PROJECT_DIR$/peg-solitaire.iml" />
     </modules>
   </component>
+  <component name="ProjectResources">
+    <default-html-doctype>http://www.w3.org/1999/xhtml</default-html-doctype>
+  </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
@@ -250,26 +277,6 @@
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="hg4idea" />
-  </component>
-  <component name="libraryTable">
-    <library name="scala 2.8">
-      <CLASSES>
-        <root url="file:///usr/share/scala/lib" />
-      </CLASSES>
-      <JAVADOC>
-        <root url="file:///usr/share/doc/scala" />
-      </JAVADOC>
-      <SOURCES>
-        <root url="jar:///usr/share/scala/src/scalap-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/sbaz-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/scala-compiler-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/scala-swing-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/scala-library-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/scala-dbc-src.jar!/" />
-        <root url="jar:///usr/share/scala/src/scala-partest-src.jar!/" />
-      </SOURCES>
-      <jarDirectory url="file:///usr/share/scala/lib" recursive="false" />
-    </library>
   </component>
 </project>
 
