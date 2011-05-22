@@ -17,8 +17,6 @@
 
 package com.googlecode.pegsolitaire
 
-import scala.tools.nsc.Interpreter
-
 object MoveDirections extends Enumeration {
 	val Horizontal = Value("horizontal")
 	val Vertical = Value("vertical")
@@ -204,12 +202,12 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	private val interpreter = {
 		val settings = new scala.tools.nsc.Settings
 		settings.usejavacp.value = true
-		new scala.tools.nsc.Interpreter(settings)
+		new scala.tools.nsc.interpreter.IMain(settings)
 	}
 
 	private val boardHelper: BoardHelper = {
 		var result = new Array[BoardHelper](1)
-		interpreter.quietBind("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result)
+		interpreter.quietBind(scala.tools.nsc.interpreter.NamedParam("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result))
 		var cmd: String = if (boardDescription ==""". . o o o . .
 . . o o o . .
 o o o o o o o
