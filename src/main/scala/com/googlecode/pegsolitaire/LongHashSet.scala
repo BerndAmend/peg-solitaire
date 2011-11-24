@@ -45,8 +45,14 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 	 */
 	protected var _size = 0
 
+	/**
+	 * number of elements inside the set
+	 */
 	override def size = _size
 
+	/**
+	 * current fill state in percent
+	 */
 	def used = _size.toDouble / table.length.toDouble
 
 	/**
@@ -93,9 +99,10 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 
 	class HashSetIterator extends HashSetIteratorRead(0,1) {
 
+    @throws(classOf[IllegalStateException])
 		def remove() {
 			if (last < 0)
-				throw new IllegalStateException()
+				throw new java.lang.IllegalStateException()
 
 			internalRemove(last)
 			if (table(last) != INVALID_ELEMENT)
@@ -111,11 +118,17 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 		ensureSizeFor(expectedSize)
 	}
 
+	/**
+	 * add all elements from an Iterable[Long] to the set
+	 */
 	def this(c: Iterable[Long]) {
 		this ()
 		addAll(c)
 	}
 
+	/**
+	 * add all elements from a Collection[Long] to the set
+	 */
 	def this(c: Collection[Long]) {
 		this ()
 		addAll(c)

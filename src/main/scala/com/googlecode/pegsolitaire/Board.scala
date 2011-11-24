@@ -201,14 +201,14 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 	private val interpreter = {
 		val settings = new scala.tools.nsc.Settings
-		settings.usejavacp.value = true
+		settings.embeddedDefaults[BoardHelper]
 		new scala.tools.nsc.interpreter.IMain(settings)
 	}
 
 	private val boardHelper: BoardHelper = {
-		var result = new Array[BoardHelper](1)
+		val result = new Array[BoardHelper](1)
 		interpreter.quietBind(scala.tools.nsc.interpreter.NamedParam("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result))
-		var cmd: String = if (boardDescription ==""". . o o o . .
+		val cmd: String = if (boardDescription ==""". . o o o . .
 . . o o o . .
 o o o o o o o
 o o o o o o o

@@ -1,3 +1,6 @@
-glob:*.class
-glob:*.jar
-glob:*~
+syntax: glob
+*.class
+*.jar
+*~
+.idea*
+target

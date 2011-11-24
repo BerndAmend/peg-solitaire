@@ -48,7 +48,7 @@ object TUI {
 					"  -color               enable colored text output\n" +
 					"  -no-parallelize      don't parallelize parts of the solve process, decreases the memory usage\n" +
 					"  -debug               enable debug output")
-			exit(1)
+			sys.exit(1)
 		}
 
 		/*
@@ -72,7 +72,7 @@ object TUI {
 			def checkForArguments(name: String, num: Int=1): Int = {
 				if(i+num == args.length) {
 					printlnError("error: " + name + " requires an additional parameter")
-					exit(-1)
+					sys.exit(-1)
 				}
 				num
 			}
@@ -212,6 +212,7 @@ object TUI {
 				val num = solitaire.solution(i).size
 				println("  - removed pegs = " + i + "  possible fields = " + num)
 				count += num
+				Unit
 			}
 		}
 		printlnColoredText("There are " + count + " possible fields.", Color.blue)
@@ -262,7 +263,7 @@ object TUI {
 				val input = readLine()
 				if(input.toLowerCase=="x") {
 					println("Bye, bye")
-					exit(0)
+					sys.exit(0)
 				}
 				selection = input.toInt
 			} catch {
@@ -296,7 +297,7 @@ object TUI {
 			for(e <- splitted) {
 				if(e.toLowerCase == "x") {
 					println("Bye, bye")
-					exit(0)
+					sys.exit(0)
 				}
 				try {
 					val num = e.toInt
@@ -304,6 +305,7 @@ object TUI {
 						printlnError("ignore invalid selection: " + num)
 					else
 						selected ::= choices(num)
+					Unit
 				} catch {
 					case _ => printlnError("ignore invalid selection: " + input)
 				}
