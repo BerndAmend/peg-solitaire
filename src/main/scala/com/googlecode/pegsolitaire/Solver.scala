@@ -196,7 +196,11 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 		Time("Solve") {
 			for (sol <- (getStartNum+1) until game.length) {
 				printColoredText("search fields with " + sol + " removed pegs", Color.green)
-				calculateForward(sol)
+        if(parallelProcessing) {
+				  calculateForwardParallel(sol)
+        } else {
+          calculateForward(sol)
+        }
 				printColoredText(", found " + solution(sol).size + " fields", Color.green)
 				printDepthDebug(solution(sol))
 			}
@@ -206,11 +210,7 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 
 		// cleaning the gamefield after every step is useless
 		Time("Solve") {
-			if(parallelProcessing) {
-				cleanBackwardParallel(getEndNum)
-			} else {
-				cleanBackward(getEndNum)
-			}
+			cleanBackward(getEndNum)
 		}
 
 		printlnColoredText("There are " + deadends.sum + " fields which doesn't result in a 1 peg solution", Color.blue)
@@ -356,68 +356,36 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 
 	private def printDepthDebug(current: LongHashSet): Unit = printlnlnDebug(" " + current.depth)
 
-	private def calculateForward (sol: Int): Unit = solution(sol - 1) foreach { game.addFollower(_, solution(sol)) }
-	private def calculateBackward(sol: Int): Unit = solution(sol + 1) foreach { game.addPredecessor(_, solution(sol)) }
+  private def calculateNextStep (sol: Int, next: Int, func: (Long, LongHashSet) => Boolean): Unit = solution(sol + next) foreach { func(_, solution(sol))}
 
-	/**
-	 * untested
-	 */
-	private def cleanForward(pos: Int) {
-		for (i <- pos until getEndNum) {
+	private def calculateForward (sol: Int): Unit = calculateNextStep(sol, -1, game.addFollower)
+	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol,  1, game.addPredecessor)
 
-			val current = solution(i-1)
-			val newsol = new LongHashSet()
-			solution(i) foreach { elem => if (game.hasPredecessor(elem, current))	newsol += elem }
+	private def calculateForwardParallel (sol: Int): Unit = calculateNextStepParallel(sol, -1, game.addFollower)
+	private def calculateBackwardParallel(sol: Int): Unit = calculateNextStep(sol,  1, game.addPredecessor)
 
-			if (solution(i).size != newsol.size) {
-				val deadEndFields = solution(i).size - newsol.size
-				deadends(i) += deadEndFields // update dead end counter
-				solution(i) = newsol
+  private def calculateNextStepParallel(sol: Int, next: Int, func: (Long, LongHashSet) => Boolean): Unit = {
+    solution(sol + next) foreach { func(_, solution(sol))}
+  }
 
-				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
-				printDepthDebug(solution(i))
+	private def cleanForward(pos: Int) = cleanNextStepParallel(pos, 1, pos, getEndNum, game.hasPredecessor)
+	private def cleanBackward(pos: Int) = cleanNextStepParallel(pos, -1, pos, getStartNum, game.hasFollower)
 
-			} else {
-				return
-			}
-		}
-	}
-
-	private def cleanBackward(pos: Int) {
-		for (i <- (pos-1).until(getStartNum, -1)) {
-
-			val current = solution(i+1)
-			val newsol = new LongHashSet()
-			solution(i) foreach { elem => if (game.hasFollower(elem, current)) newsol += elem	}
-
-			if (solution(i).size != newsol.size) {
-				val deadEndFields = solution(i).size - newsol.size
-				deadends(i) += deadEndFields // update dead end counter
-				solution(i) = newsol
-
-				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
-				printDepthDebug(solution(i))
-			} else {
-				return
-			}
-		}
-	}
-
-	private def cleanBackwardParallel(pos: Int) {
-		val threadCount = Runtime.getRuntime.availableProcessors
+	private def cleanNextStepParallel(pos: Int, next: Int, from: Int, to: Int, func: (Long, LongHashSet) => Boolean) {
+		val threadCount = if(parallelProcessing) Runtime.getRuntime.availableProcessors else 1
 		
-		for (i <- (pos - 1).until(getStartNum, -1)) {
+		for (i <- from.until(to, next)) {
 
 			val results = (0 until threadCount).map {
 				threadID => future[(Long, Long, List[Long])] {
 					var deadEndFields = 0L
 					var resultSize = 0L
-					val current = solution(i + 1)
-					val iter = solution(i).iteratorRead(threadID, threadCount)
+					val current = solution(i)
+					val iter = solution(i + next).iteratorRead(threadID, threadCount)
 					var result: List[Long] = List[Long]()
 					while (iter.hasNext) {
 						val elem = iter.next
-						if (game.hasFollower(elem, current)) {
+						if (func(elem, current)) {
 							result ::= elem
 							resultSize += 1L
 						} else {
@@ -438,12 +406,12 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 				newsol += r._3
 			}
 
-			solution(i) = newsol
-			deadends(i) += deadEndFields
+			solution(i + next) = newsol
+			deadends(i + next) += deadEndFields
 
 			if (deadEndFields > 0L) {
 				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
-				printDepthDebug(solution(i))
+				printDepthDebug(solution(i+next))
 			} else {
 				return
 			}
