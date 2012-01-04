@@ -26,7 +26,7 @@ import Helper._
 object TUI {
 	def main(args: Array[String]) {
 		println("Peg Solitaire 0.4dev\n" +
-				"  Copyright (C) 2010-2011 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
+				"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 		        "  This program is free software: you can redistribute it and/or modify\n" +
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
 		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
@@ -46,8 +46,9 @@ object TUI {
 					"  -browser             interactive text based interface to explore all possible solutions\n" +
 					"  -count               count the number of ways to a solution (this may take a while)\n" +
 					"  -color               enable colored text output\n" +
-					"  -no-parallelize      don't parallelize parts of the solve process, decreases the memory usage\n" +
-					"  -debug               enable debug output")
+					"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
+					"  -debug               enable debug output\n\n" +
+					"  To reduce memory usage try \"-thread-count 1\"")
 			sys.exit(1)
 		}
 
@@ -64,7 +65,7 @@ object TUI {
 
 		var arg_board = false
 		var selectedGame = Boards.English
-		var parallelize = true
+		var thread_count = 0
 
 		var i=0
 		while(i<args.length) {
@@ -99,7 +100,19 @@ object TUI {
 					arg_board = true
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
-				case "-no-parallelize" => parallelize = false
+				case "-thread-count" =>
+					i += checkForArguments("-thread-count")
+					try {
+						thread_count = args(i).toInt
+						if(thread_count < 0) {
+							printlnError("error: negative arguments for -thread-count are not allowed, exit")
+							return
+						}
+						thread_count = if(thread_count==0) Runtime.getRuntime.availableProcessors else thread_count
+					} catch {
+						case _ => printlnError("error: invalid argument for -thread-count, exit")
+											return
+					}
 				case s => printlnError("error: unknown parameter " + s + " exit")
 						return
 			}
@@ -130,6 +143,8 @@ object TUI {
 			printlnError("error: either -save or -browser has to be selected")
 			return
 		}
+		
+		println("Use " + thread_count + " threads")
 
 		var solitaire: Solver = null
 
@@ -184,7 +199,7 @@ object TUI {
 			} else {
 				solitaireType.possibleStartFields
 			}
-			Time("Solve")(solitaire = new Solver(solitaireType, selection, parallelize))
+			Time("Solve")(solitaire = new Solver(solitaireType, selection, thread_count))
 		} else if(!arg_load.isEmpty) {
 			try {
 				Time("Load")(solitaire = Solver.fromFile(arg_load))

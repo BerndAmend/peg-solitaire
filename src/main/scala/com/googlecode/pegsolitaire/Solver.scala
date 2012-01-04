@@ -167,7 +167,12 @@ object Solver {
 
 }
 
-class Solver(val game: Board, val parallelProcessing: Boolean) {
+	/**
+	 * @param threadCount threadCount 0=automatic
+	 */
+class Solver(val game: Board, threadcount: Int) {
+	require(threadcount >= 0)
+	val thread_count = if(threadcount==0) Runtime.getRuntime.availableProcessors else threadcount
 
 	/**
 	 *  solution(0) is unused
@@ -179,10 +184,10 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 	 */
 	private val deadends = Array.fill[Long](game.length)(0L)
 
-	def this(game: Board) = this(game, true)
+	def this(game: Board) = this(game, 0)
 
-	def this(game: Board, startFields: Iterable[Long], parallelProcessing: Boolean = true) {
-		this(game, parallelProcessing)
+	def this(game: Board, startFields: Iterable[Long], threadcount: Int = 0) {
+		this(game, threadcount)
 
 		for(e <- startFields) {
 			val bc = game.length - java.lang.Long.bitCount(e)
@@ -196,7 +201,7 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 		Time("Solve") {
 			for (sol <- (getStartNum+1) until game.length) {
 				printColoredText("search fields with " + sol + " removed pegs", Color.green)
-        if(parallelProcessing) {
+        if(thread_count != 1) {
 				  calculateForwardParallel(sol)
         } else {
           calculateForward(sol)
@@ -372,16 +377,14 @@ class Solver(val game: Board, val parallelProcessing: Boolean) {
 	private def cleanBackward(pos: Int) = cleanNextStepParallel(pos, -1, pos, getStartNum, game.hasFollower)
 
 	private def cleanNextStepParallel(pos: Int, next: Int, from: Int, to: Int, func: (Long, LongHashSet) => Boolean) {
-		val threadCount = if(parallelProcessing) Runtime.getRuntime.availableProcessors else 1
-		
 		for (i <- from.until(to, next)) {
 
-			val results = (0 until threadCount).map {
+			val results = (0 until thread_count).map {
 				threadID => future[(Long, Long, List[Long])] {
 					var deadEndFields = 0L
 					var resultSize = 0L
 					val current = solution(i)
-					val iter = solution(i + next).iteratorRead(threadID, threadCount)
+					val iter = solution(i + next).iteratorRead(threadID, thread_count)
 					var result: List[Long] = List[Long]()
 					while (iter.hasNext) {
 						val elem = iter.next
