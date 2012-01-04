@@ -29,11 +29,9 @@ object MoveDirections extends Enumeration {
  */
 trait BoardHelper {
 	/**
-	 * check if a field is already in the hashSet
-	 *
-	 * @return true if a rotation/flipped version already exists in the hashSet
+	 * return the normalform of a gamefield
 	 */
-	def isInLongHashSet(field: Long, hashSet: LongHashSet): Boolean
+	def getNormalform(field: Long): Long
 
 	/**
 	 * @return all fields which are equal the provided field
@@ -217,31 +215,32 @@ o o o o o o o
 . . o o o . .
 . . o o o . .""" && moveDirections.sameElements(Array(MoveDirections.Horizontal, MoveDirections.Vertical))) {
 			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
-				def isInLongHashSet(field: Long, hashSet: com.googlecode.pegsolitaire.LongHashSet): Boolean = {
-					if(hashSet.contains(field)) return true
+				def getNormalform(field: Long): Long = {
+
+          var n = field
 
 					val n90  = rotate90(field)
-					if(hashSet.contains(n90)) return true
+					if(n90 < n) n = n90
 
 					val n180 = rotate180(field)
-					if(hashSet.contains(n180)) return true
+					if(n180 < n) n = n180
 
 					val n270 = rotate270(field)
-					if(hashSet.contains(n270)) return true
+					if(n270 < n) n = n270
 
 					val v    = vflip(field)
-					if(hashSet.contains(v)) return true
+					if(v < n) n = v
 
 					val v90  = vflip(n90)
-					if(hashSet.contains(v90)) return true
+					if(v90 < n) n = v90
 
 					val v180 = vflip(n180)
-					if(hashSet.contains(v180)) return true
+					if(v180 < n) n = v180
 
 					val v270 = vflip(n270)
-					if(hashSet.contains(v270)) return true
+					if(v270 < n) n = v270
 
-					false
+					n
 				}
 
 				def getEquivalentFields(field: Long): Iterable[Long] = {
@@ -386,7 +385,7 @@ o o o o o o o
 			}"""
 		} else {
 			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
-					def isInLongHashSet(field: Long, hashSet: com.googlecode.pegsolitaire.LongHashSet) = hashSet.contains(field)
+					def getNormalform(field: Long) = field
 					def getEquivalentFields(field: Long): Iterable[Long] = List(field)
 			}"""
 		}
@@ -472,7 +471,7 @@ o o o o o o o
 	 * return true if field has a follower in the solutions HashSet
 	 */
 	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-		applyMoves(checkfield, field) { n => if (boardHelper.isInLongHashSet(n, solutions)) return true }
+		applyMoves(checkfield, field) { n => if (solutions.contains(boardHelper.getNormalform(n))) return true }
 		false
 	}
 
@@ -485,7 +484,7 @@ o o o o o o o
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): Iterable[Long] = {
 		var result = new LongHashSet
-		applyMoves(checkfield, field) { n => if (boardHelper.isInLongHashSet(n, searchSet)) result += n}
+		applyMoves(checkfield, field) { n => if (searchSet.contains(boardHelper.getNormalform(n))) result += n}
 		result
 	}
 
@@ -498,13 +497,7 @@ o o o o o o o
 	 *
 	 * @return true if the field was really added
 	 */
-	 def addToLongHashSet(field: Long, hashSet: LongHashSet): Boolean = {
-		if (!boardHelper.isInLongHashSet(field, hashSet)) {
-			hashSet += field
-			true
-		} else
-			false
-	}
+	 final def addToLongHashSet(field: Long, hashSet: LongHashSet): Boolean = hashSet.add(boardHelper.getNormalform(field))
 
 	/**
 	 * @return a complete list with all equivalent fields for the fields HashSet
