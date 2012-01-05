@@ -19,6 +19,38 @@ package com.googlecode.pegsolitaire
 import Helper._
 import scala.concurrent.ops._
 
+trait StatusObserver {
+	def begin_forward_calculation()
+	def end_forward_calculation(required_time: Long)
+	
+	def begin_backward_cleaning()
+	def end_backward_cleaning(required_time: Long)
+	
+	def begin_forward_calculation_step(removed_pegs: Int)
+	def end_forward_calculation_step(removed_pegs: Int, solutions: LongHashSet)
+
+	def begin_backward_cleaning_step(removed_pegs: Int)
+	def end_backward_cleaning_step(removed_pegs: Int, deadends: Long)
+	
+	def dead_ends(count: Long)
+}
+
+class DummyObserver extends StatusObserver {
+	def begin_forward_calculation() {}
+	def end_forward_calculation(required_time: Long) {}
+
+	def begin_backward_cleaning() {}
+	def end_backward_cleaning(required_time: Long) {}
+
+	def begin_forward_calculation_step(removed_pegs: Int) {}
+	def end_forward_calculation_step(removed_pegs: Int, solutions: LongHashSet) {}
+
+	def begin_backward_cleaning_step(removed_pegs: Int) {}
+	def end_backward_cleaning_step(removed_pegs: Int, deadends: Long) {}
+
+	def dead_ends(count: Long) {}
+}
+
 object Boards extends Enumeration {
 	val English = Value("english")
 	val European = Value("euro")
@@ -68,7 +100,7 @@ object Solver {
 	 *   2: All fields are handled as User defined fields, since equal fields are now detected for all games.
 	 *      Due to this change it is not possible to correctly load new results with an old program version.
 	 */
-	def fromFile(filename: String): Solver = {
+	def fromFile(filename: String, observer: StatusObserver): Solver = {
 		var output: Solver = null
 
 		val in = new java.io.DataInputStream(
@@ -102,9 +134,9 @@ object Solver {
 
 			// read and create game
 			boardType match {
-				case Boards.English => output = new Solver(Boards.EnglishBoard)
-				case Boards.European => output = new Solver(Boards.EuropeanBoard)
-				case Boards.Holes15 => output = new Solver(Boards.Holes15Board)
+				case Boards.English => output = new Solver(Boards.EnglishBoard, observer)
+				case Boards.European => output = new Solver(Boards.EuropeanBoard, observer)
+				case Boards.Holes15 => output = new Solver(Boards.Holes15Board, observer)
 				case Boards.User =>
 					val possibleMoves = new Array[MoveDirections.Value](in.readInt)
 
@@ -116,7 +148,7 @@ object Solver {
 					for(i <- 0 until boardDescription.size)
 						boardDescription(i) = in.readChar
 
-					output = new Solver(new Board(new String(boardDescription), possibleMoves))
+					output = new Solver(new Board(new String(boardDescription), possibleMoves), observer)
 
 				case _ => throw new Exception("unsupported boardType")
 			}
@@ -170,7 +202,7 @@ object Solver {
 	/**
 	 * @param threadCount threadCount 0=automatic
 	 */
-class Solver(val game: Board, threadcount: Int) {
+class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	require(threadcount >= 0)
 	val thread_count = if(threadcount==0) Runtime.getRuntime.availableProcessors else threadcount
 
@@ -184,10 +216,10 @@ class Solver(val game: Board, threadcount: Int) {
 	 */
 	private val deadends = Array.fill[Long](game.length)(0L)
 
-	def this(game: Board) = this(game, 0)
+	def this(game: Board, observer: StatusObserver) = this(game, observer, 0)
 
-	def this(game: Board, startFields: Iterable[Long], threadcount: Int = 0) {
-		this(game, threadcount)
+	def this(game: Board, startFields: Iterable[Long], observer: StatusObserver, threadcount: Int = 0) {
+		this(game, observer, threadcount)
 
 		for(e <- startFields) {
 			val bc = game.length - java.lang.Long.bitCount(e)
@@ -198,7 +230,8 @@ class Solver(val game: Board, threadcount: Int) {
 		}
 
 
-		Time("Solve") {
+		observer.begin_forward_calculation()
+		Time(observer.end_forward_calculation _) {
 			for (sol <- (getStartNum+1) until game.length) {
 				printColoredText("search fields with " + sol + " removed pegs", Color.green)
         if(thread_count != 1) {
@@ -214,11 +247,12 @@ class Solver(val game: Board, threadcount: Int) {
 		println()
 
 		// cleaning the gamefield after every step is useless
-		Time("Solve") {
+		observer.begin_backward_cleaning()
+		Time(observer.end_backward_cleaning _) {
 			cleanBackward(getEndNum)
 		}
 
-		printlnColoredText("There are " + deadends.sum + " fields which doesn't result in a 1 peg solution", Color.blue)
+		observer.dead_ends(deadends.sum)
 	}
 
 	protected def getCompleteList(solutionNumber: Int): Iterable[Long] = game.getCompleteList(solution(solutionNumber))
@@ -321,11 +355,10 @@ class Solver(val game: Board, threadcount: Int) {
 	}
 
 	/**
-	 * count how many different games are playable
+	 * Count how many ways are available to solve the board (this may take a while)
 	 * ToDo: use getStart and getEnd to allow incomplete games
 	 */
 	def countPossibleGames(): BigDecimal = {
-		println("\nCount how many ways are available to solve the board (this may take a while)")
 		var previous: scala.collection.mutable.HashMap[Long, BigDecimal] = null
 		var current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
@@ -379,6 +412,8 @@ class Solver(val game: Board, threadcount: Int) {
 	private def cleanNextStepParallel(pos: Int, next: Int, from: Int, to: Int, func: (Long, LongHashSet) => Boolean) {
 		for (i <- from.until(to, next)) {
 
+			observer.begin_backward_cleaning_step(i+next)
+
 			val results = (0 until thread_count).map {
 				threadID => future[(Long, Long, List[Long])] {
 					var deadEndFields = 0L
@@ -412,10 +447,8 @@ class Solver(val game: Board, threadcount: Int) {
 			solution(i + next) = newsol
 			deadends(i + next) += deadEndFields
 
-			if (deadEndFields > 0L) {
-				print("clean field list with " + i + " removed pegs found " + deadEndFields + " dead ends")
-				printDepthDebug(solution(i+next))
-			} else {
+			observer.end_backward_cleaning_step(i+next, deadEndFields)
+			if (deadEndFields == 0L) {
 				return
 			}
 		}

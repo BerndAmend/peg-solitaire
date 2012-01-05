@@ -19,11 +19,35 @@ package com.googlecode.pegsolitaire
 
 import Helper._
 
+class ConsolenStatusObserver extends StatusObserver {
+	def begin_forward_calculation() = println("Begin forward calculation")
+
+	def end_forward_calculation(required_time: Long) = println("Forward calculation took " + Helper.millisecToString(required_time))
+
+	def begin_backward_cleaning() = println("Begin backward cleaning")
+	def end_backward_cleaning(required_time: Long) = println("Backward cleaning took " + Helper.millisecToString(required_time))
+
+	def begin_forward_calculation_step(removed_pegs: Int) = printColoredText("search fields with " + removed_pegs + " removed pegs", Color.green)
+	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
+		printColoredText(", found " + solution.size + " fields", Color.green)
+		printlnlnDebug(" " + solution.depth)
+	}
+
+	def begin_backward_cleaning_step(removed_pegs: Int) = printColoredText("clean field list with " + removed_pegs + " removed pegs", Color.green)
+	def end_backward_cleaning_step(removed_pegs: Int, deadends: Long) = {
+		printColoredText(", found " + deadends + " dead ends\n", Color.green)
+		//printDepthDebug(solution(i+next))
+	}
+
+	def dead_ends(count: Long) = printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
+}
+
 /**
  * TODO:
  *  rewrite argument parser
  */
 object TUI {
+
 	def main(args: Array[String]) {
 		println("Peg Solitaire 0.4dev\n" +
 				"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
@@ -51,6 +75,8 @@ object TUI {
 					"  To reduce memory usage try \"-thread-count 1\"")
 			sys.exit(1)
 		}
+
+		val observer = new ConsolenStatusObserver
 
 		/*
 		 * parse command line arguments
@@ -199,10 +225,10 @@ object TUI {
 			} else {
 				solitaireType.possibleStartFields
 			}
-			Time("Solve")(solitaire = new Solver(solitaireType, selection, thread_count))
+			Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
 		} else if(!arg_load.isEmpty) {
 			try {
-				Time("Load")(solitaire = Solver.fromFile(arg_load))
+				Time("Load")(solitaire = Solver.fromFile(arg_load, observer))
 			} catch {
 				case _ =>
 					printlnError("error: couldn't load solution, abort")
@@ -232,8 +258,10 @@ object TUI {
 		}
 		printlnColoredText("There are " + count + " possible fields.", Color.blue)
 
-		if(arg_count)
+		if(arg_count) {
+			println("\nCount how many ways are available to solve the board (this may take a while)")
 			printlnColoredText("There are " + solitaire.countPossibleGames + " ways to a solution.", Color.blue)
+		}
 
 		if(!arg_save.isEmpty)
 			solitaire.save(arg_save)
