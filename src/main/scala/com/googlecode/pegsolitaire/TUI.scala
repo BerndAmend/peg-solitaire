@@ -302,20 +302,20 @@ object TUI {
 		while (selection < 0 || selection >= choices.length) {
 			print("(x to abort) > ")
 			Console.flush
+			val input = readLine()
+			if(input.toLowerCase=="x") {
+				println("Bye, bye")
+				sys.exit(0)
+			}
 			try {
-				val input = readLine()
-				if(input.toLowerCase=="x") {
-					println("Bye, bye")
-					sys.exit(0)
-				}
 				selection = input.toInt
+				if (selection < 0 || selection >= choices.length)
+					printlnError("error: invalid selection, please try again")
 			} catch {
 				case _ =>
 					printlnError("error: invalid input, please try again")
 					selection = -1
 			}
-			if (selection < 0 || selection >= choices.length)
-				printlnError("error: invalid selection, please try again")
 		}
 
 		choices(selection)
