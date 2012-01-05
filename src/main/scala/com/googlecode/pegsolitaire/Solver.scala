@@ -233,14 +233,9 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		observer.begin_forward_calculation()
 		Time(observer.end_forward_calculation _) {
 			for (sol <- (getStartNum+1) until game.length) {
-				printColoredText("search fields with " + sol + " removed pegs", Color.green)
-        if(thread_count != 1) {
-				  calculateForwardParallel(sol)
-        } else {
-          calculateForward(sol)
-        }
-				printColoredText(", found " + solution(sol).size + " fields", Color.green)
-				printDepthDebug(solution(sol))
+				observer.begin_forward_calculation_step(sol)
+				calculateForward(sol)
+				observer.end_forward_calculation_step(sol, solution(sol))
 			}
 		}
 		
@@ -392,32 +387,40 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		count
 	}
 
-	private def printDepthDebug(current: LongHashSet): Unit = printlnlnDebug(" " + current.depth)
-
-  private def calculateNextStep (sol: Int, next: Int, func: (Long, LongHashSet) => Boolean): Unit = solution(sol + next) foreach { func(_, solution(sol))}
-
 	private def calculateForward (sol: Int): Unit = calculateNextStep(sol, -1, game.addFollower)
 	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol,  1, game.addPredecessor)
 
-	private def calculateForwardParallel (sol: Int): Unit = calculateNextStepParallel(sol, -1, game.addFollower)
-	private def calculateBackwardParallel(sol: Int): Unit = calculateNextStep(sol,  1, game.addPredecessor)
+  private def calculateNextStep(sol: Int, next: Int, func: (Long, LongHashSet) => Boolean) {
+	  val results = (0 until thread_count).map {
+      threadID => future[Boolean] {
+        val iter = solution(sol + next).iteratorRead(threadID, thread_count)
+        var result = new LongHashSet()
+        while (iter.hasNext) {
+          func(iter.next, result)
+        }
+	      val current = solution(sol)
+	      current.synchronized {
+		      current += result
+	      }
+        true
+      }
+    }
 
-  private def calculateNextStepParallel(sol: Int, next: Int, func: (Long, LongHashSet) => Boolean): Unit = {
-    solution(sol + next) foreach { func(_, solution(sol))}
+	  results foreach (_())
   }
 
-	private def cleanForward(pos: Int) = cleanNextStepParallel(pos, 1, pos, getEndNum, game.hasPredecessor)
-	private def cleanBackward(pos: Int) = cleanNextStepParallel(pos, -1, pos, getStartNum, game.hasFollower)
+	private def cleanForward(pos: Int) = cleanNextStep(pos, 1, pos, getEndNum, game.hasPredecessor)
+	private def cleanBackward(pos: Int) = cleanNextStep(pos, -1, pos, getStartNum, game.hasFollower)
 
-	private def cleanNextStepParallel(pos: Int, next: Int, from: Int, to: Int, func: (Long, LongHashSet) => Boolean) {
+	private def cleanNextStep(pos: Int, next: Int, from: Int, to: Int, func: (Long, LongHashSet) => Boolean) {
 		for (i <- from.until(to, next)) {
 
 			observer.begin_backward_cleaning_step(i+next)
 
 			val results = (0 until thread_count).map {
-				threadID => future[(Long, Long, List[Long])] {
+				threadID => future[(Long, Int, List[Long])] {
 					var deadEndFields = 0L
-					var resultSize = 0L
+					var resultSize = 0
 					val current = solution(i)
 					val iter = solution(i + next).iteratorRead(threadID, thread_count)
 					var result: List[Long] = List[Long]()
@@ -425,7 +428,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 						val elem = iter.next
 						if (func(elem, current)) {
 							result ::= elem
-							resultSize += 1L
+							resultSize += 1
 						} else {
 							deadEndFields += 1L
 						}
@@ -435,8 +438,8 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			}
 
 			// merge
-			val resultSize = results.foldLeft(0L) ( _ + _()._2) // wait for results and calculate new hashset size
-			val newsol = new LongHashSet()
+			val resultSize = results.foldLeft(0) ( _ + _()._2) // wait for results and calculate new hashset size
+			val newsol = new LongHashSet(resultSize)
 			var deadEndFields = 0L
 			for (e <- results) {
 				val r = e()
