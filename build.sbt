@@ -12,3 +12,4 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.9.1"
 
 scalacOptions ++= List("-unchecked", "-deprecation")
 
+initialize ~= { _ => System.setProperty("peg-solitaire.usejavacp", "false") }
