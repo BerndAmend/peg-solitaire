@@ -134,7 +134,6 @@ object TUI {
 							printlnError("error: negative arguments for -thread-count are not allowed, exit")
 							return
 						}
-						thread_count = if(thread_count==0) Runtime.getRuntime.availableProcessors else thread_count
 					} catch {
 						case _ => printlnError("error: invalid argument for -thread-count, exit")
 											return
@@ -169,6 +168,8 @@ object TUI {
 			printlnError("error: either -save or -browser has to be selected")
 			return
 		}
+
+		thread_count = if(thread_count==0) Runtime.getRuntime.availableProcessors else thread_count
 		
 		println("Use " + thread_count + " threads")
 
