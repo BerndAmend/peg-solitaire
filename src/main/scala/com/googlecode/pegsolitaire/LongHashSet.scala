@@ -22,7 +22,6 @@
 package com.googlecode.pegsolitaire
 
 import Helper._
-import java.util.{Collection, NoSuchElementException}
 
 /**
  * A memory-efficient hash set optimized for Longs
@@ -80,7 +79,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 
 		def next = {
 			if (!hasNext)
-				throw new NoSuchElementException()
+				throw new java.util.NoSuchElementException()
 
 			last = index
 			val toReturn = table(index)
@@ -127,14 +126,6 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 		addAll(c)
 	}
 
-	/**
-	 * add all elements from a Collection[Long] to the set
-	 */
-	def this(c: Collection[Long]) {
-		this ()
-		addAll(c)
-	}
-
 	private def this(t: Array[Long], s: Int) {
 		this()
 		_size = s
@@ -148,15 +139,6 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 			ensureSizeFor(_size + c.size)
 		for (e <- c)
 			add(e)
-	}
-
-	def +=(c: Collection[Long]) = addAll(c)
-
-	def addAll(c: Collection[Long]) = {
-		ensureSizeFor(_size + c.size())
-		val citer = c.iterator
-		while (citer.hasNext)
-			add(citer.next)
 	}
 
 	/**
