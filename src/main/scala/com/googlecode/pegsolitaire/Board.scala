@@ -102,14 +102,14 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	 * (_,_,m) => ...011... (checkmask2)
 	 */
 	private val masks:(Array[Long], Array[Long], Array[Long]) =  {
-		val movemask = new java.util.LinkedList[Long]()
-		val checkmask1 = new java.util.LinkedList[Long]()
-		val checkmask2 = new java.util.LinkedList[Long]()
+		var movemask = List[Long]()
+		var checkmask1 = List[Long]()
+		var checkmask2 = List[Long]()
 
 		def addMove(pos1:(Int,Int), pos2:(Int,Int), pos3:(Int,Int)) {
-			movemask   add ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
-			checkmask1 add ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)))
-			checkmask2 add ((1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
+			movemask   ::= ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
+			checkmask1 ::= ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)))
+			checkmask2 ::= ((1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
 		}
 
 		for(y <- 0 until boardDescriptionArray.length) {
@@ -154,9 +154,9 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		require(movemask.size == checkmask1.size && checkmask1.size == checkmask2.size)
 
 		// create Array
-		val movemaskArray = new Array[Long](movemask.size)
-		val checkmaskArray1 = new Array[Long](checkmask1.size)
-		val checkmaskArray2 = new Array[Long](checkmask2.size)
+		val movemaskArray = movemask.toArray
+		val checkmaskArray1 = checkmask1.toArray
+		val checkmaskArray2 = checkmask2.toArray
 
 		val miter = movemask.iterator
 		val c1iter = checkmask1.iterator
