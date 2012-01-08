@@ -23,32 +23,40 @@ package com.googlecode.pegsolitaire
 
 import Helper._
 
-/**
- * A memory-efficient hash set optimized for Longs
- * based on the java HashSet implementation by Google Inc.
- */
-final class LongHashSet extends scala.collection.Iterable[Long] {
-
+final object LongHashSet {
 	/**
 	 * In the interest of memory-savings, we start with the smallest feasible
 	 * power-of-two table size that can hold three items without rehashing. If we
 	 * started with a size of 2, we'd have to expand as soon as the second item
 	 * was added.
 	 */
-	private val INITIAL_TABLE_SIZE = 1 << 3
+	final val INITIAL_TABLE_SIZE = 1 << 8
 
 	final val INVALID_ELEMENT = Long.MinValue
+
+	final def allocateTableMemory(size: Int) = {
+		val r = new Array[Long](size)
+		java.util.Arrays.fill(r, INVALID_ELEMENT)
+		r
+	}
+}
+
+/**
+ * A memory-efficient hash set optimized for Longs
+ * based on the java HashSet implementation by Google Inc.
+ */
+final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), s: Int=0) { // extends scala.collection.Iterable[Long] {
 
 	/**
 	 * Number of objects in this set; transient due to custom serialization.
 	 * Default access to avoid synthetic accessors from inner classes.
 	 */
-	protected var _size = 0
+	protected var _size = s
 
 	/**
 	 * number of elements inside the set
 	 */
-	override def size = _size
+	def size = _size
 
 	/**
 	 * current fill state in percent
@@ -59,13 +67,13 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 	 * Backing store for all the objects; transient due to custom serialization.
 	 * Default access to avoid synthetic accessors from inner classes.
 	 */
-	protected var table = Array.fill[Long](INITIAL_TABLE_SIZE)(INVALID_ELEMENT)
+	protected var table = t
 
   /**
    * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
    * e.g. to read multiple elements from a HashSet at a time without synchronization
    */
-	class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) extends scala.collection.Iterator[Long] {
+	class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
     require(groupID >= 0)
     require(groupSize > 0)
     require(groupID < groupSize)
@@ -77,7 +85,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 
 		def hasNext = index < table.length
 
-		def next = {
+		def next: Long = {
 			if (!hasNext)
 				throw new java.util.NoSuchElementException()
 
@@ -90,7 +98,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 
 		private def advanceToItem() {
 			while (index < table.length) {
-				if (table(index) != INVALID_ELEMENT)
+				if (table(index) != LongHashSet.INVALID_ELEMENT)
 					return
 				index += groupSize
 			}
@@ -105,7 +113,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 				throw new java.lang.IllegalStateException()
 
 			internalRemove(last)
-			if (table(last) != INVALID_ELEMENT)
+			if (table(last) != LongHashSet.INVALID_ELEMENT)
 				index = last
 
 			last = -1
@@ -126,39 +134,59 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 		addAll(c)
 	}
 
-	private def this(t: Array[Long], s: Int) {
-		this()
-		_size = s
-		table = t
-	}
+	def this(c: LongHashSet) {
+			this (c.size)
+			addAll(c)
+		}
+
+	def isEmpty = _size == 0
 
 	def +=(c: Iterable[Long]) = addAll(c)
 
+	def +=(c: LongHashSet) = addAll(c)
+
 	def addAll(c: Iterable[Long]) = {
-		if(c.isInstanceOf[LongHashSet])
-			ensureSizeFor(_size + c.size)
 		for (e <- c)
 			add(e)
+	}
+
+	def addAll(c: LongHashSet) = {
+		ensureSizeFor(_size + c.size)
+		internal_addAll(c.table)
 	}
 
 	/**
 	 * Works just like    { @link # addAll ( Collection ) }, but for arrays. Used to avoid
 	 * having to synthesize a collection in    { @link Sets }.
+	 * ignores INVALID_ELEMENT entries in the Array
 	 */
 	def addAll(elements: Array[Long]) {
 		ensureSizeFor(_size + elements.length)
-		for (e <- elements) {
-			add(e)
-		}
+		internal_addAll(elements)
 	}
 
 	def +=(e: Long) = add(e)
 
 	def add(e: Long) = {
-		require( e != INVALID_ELEMENT)
+		require( e != LongHashSet.INVALID_ELEMENT)
 		ensureSizeFor(size + 1)
+		internal_add(e)
+	}
+
+	// add the elements without checking if there is enough space
+	private final def internal_addAll(elements: Array[Long]) = {
+		var i = 0
+		while(i<elements.length) {
+			if(elements(i) != LongHashSet.INVALID_ELEMENT)
+				internal_add(elements(i))
+			i += 1
+		}
+	}
+
+	// adds the element without checking if there is enough space or if e is invalid
+	private final def internal_add(e: Long) = {
 		val index = findOrEmpty(e)
-		if (table(index) == INVALID_ELEMENT) {
+		if (table(index) == LongHashSet.INVALID_ELEMENT) {
 			_size += 1
 			table(index) = e
 			true
@@ -169,7 +197,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 	def shrink = ensureSizeFor(_size, true)
 
 	def clear() {
-		table = Array.fill[Long](INITIAL_TABLE_SIZE)(INVALID_ELEMENT)
+		table = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE)
 		_size = 0
 	}
 
@@ -193,7 +221,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 	 * avoid synthetic accessors from inner classes.
 	 */
 	private def internalRemove(index: Int) {
-		table(index) = INVALID_ELEMENT
+		table(index) = LongHashSet.INVALID_ELEMENT
 		_size -= 1
 		plugHole(index)
 	}
@@ -206,7 +234,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 			return
 
 		// calculate table size
-		var newCapacity = if(allowShrink) INITIAL_TABLE_SIZE else table.length
+		var newCapacity = if(allowShrink) LongHashSet.INITIAL_TABLE_SIZE else table.length
 		while (newCapacity * 3 < expectedSize * 4)
 			newCapacity <<= 1
 
@@ -217,10 +245,12 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 			return
 
 		//println("LongHashSet: fillState before=" + used + " after=" + newHashSet.used)
-		val old = new LongHashSet(table, _size)
-		table = Array.fill[Long](newCapacity)(INVALID_ELEMENT)
+		val old_table = table
+		val old_size = _size
+		table = LongHashSet.allocateTableMemory(newCapacity)
 		_size = 0
-		addAll(old)
+		addAll(old_table)
+		require(_size == old_size)
 	}
 
 	/**
@@ -229,7 +259,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 	 */
 	private def find(o: Long): Int = {
 		val index = findOrEmpty(o)
-		if(table(index) == INVALID_ELEMENT)
+		if(table(index) == LongHashSet.INVALID_ELEMENT)
 			-1
 		else
 			index
@@ -245,7 +275,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 		var index = getIndex(o)
 		while (true) { // if this loop becomes an infinite loop, there is no free element in the table (this should never happen)
 			var existing = table(index)
-			if (existing == INVALID_ELEMENT || o == existing)
+			if (existing == LongHashSet.INVALID_ELEMENT || o == existing)
 				return index
 
 			index += 1
@@ -278,7 +308,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 		if (index == table.length)
 			index = 0
 
-		while (table(index) != INVALID_ELEMENT) {
+		while (table(index) != LongHashSet.INVALID_ELEMENT) {
 			val targetIndex = getIndex(table(index))
 			if (hole < index) {
 				/*
@@ -288,7 +318,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 				if (!(hole < targetIndex && targetIndex <= index)) {
 					// Plug it!
 					table(hole) = table(index)
-					table(index) = INVALID_ELEMENT
+					table(index) = LongHashSet.INVALID_ELEMENT
 					hole = index
 				}
 			} else {
@@ -299,7 +329,7 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 				if (index < targetIndex && targetIndex <= hole) {
 					// Plug it!
 					table(hole) = table(index)
-					table(index) = INVALID_ELEMENT
+					table(index) = LongHashSet.INVALID_ELEMENT
 					hole = index
 				}
 			}
@@ -318,6 +348,20 @@ final class LongHashSet extends scala.collection.Iterable[Long] {
 			r add iter.next
 		}
 
+		r
+	}
+
+	def foreach(func: Long => Unit) {
+		val iter = iteratorRead
+
+		while (iter.hasNext) {
+			func(iter.next)
+		}
+	}
+	
+	def toList = {
+		var r = List[Long]()
+		foreach( r ::= _)
 		r
 	}
 

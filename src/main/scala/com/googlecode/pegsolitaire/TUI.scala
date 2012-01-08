@@ -224,7 +224,7 @@ object TUI {
 				println("Select one or more start fields:")
 				selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
 			} else {
-				solitaireType.possibleStartFields
+				solitaireType.possibleStartFields.toList
 			}
 			Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
 		} else if(!arg_load.isEmpty) {
@@ -373,7 +373,7 @@ object TUI {
 				println("Current field " + (solitaire.game.length - java.lang.Long.bitCount(f)) + "")
 				println(solitaire.game.toString(f))
 				println()
-				s = solitaire.getFollower(f).toList
+				s = solitaire.getCompleteList(solitaire.getFollower(f)).toList
 			}
 			println("Game is finished, press enter to restart or 'x' to exit")
 			readLine match {

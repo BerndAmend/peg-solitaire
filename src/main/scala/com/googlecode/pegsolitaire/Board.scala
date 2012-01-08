@@ -36,7 +36,7 @@ trait BoardHelper {
 	/**
 	 * @return all fields which are equal the provided field
 	 */
-	def getEquivalentFields(field: Long): Iterable[Long]
+	def getEquivalentFields(field: Long): LongHashSet
 }
 
 /**
@@ -187,15 +187,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	val movemask = masks._1     // ...111... required to mask bits effected by a move and execute the move
 	val checkmask1 = masks._2   // ...110... required to check if a move is possible
 	val checkmask2 = masks._3   // ...011... required to check if a move is possible
-
-	private final def applyMoves(checkfield: Long, field: Long)(func: Long => Unit): Unit = {
-		for (i <- 0 until movemask.size) {
-			val mask = movemask(i)
-			var tmp = checkfield & mask
-			if (tmp == checkmask1(i) || tmp == checkmask2(i))
-		        func(field ^ mask)
-		}
-	}
+	val movemask_size = movemask.size
 
 	private val interpreter = {
 		val settings = new scala.tools.nsc.Settings
@@ -207,7 +199,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		new scala.tools.nsc.interpreter.IMain(settings)
 	}
 
-	private val boardHelper: BoardHelper = {
+	val boardHelper: BoardHelper = {
 		val result = new Array[BoardHelper](1)
 		interpreter.quietBind(scala.tools.nsc.interpreter.NamedParam("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result))
 		val cmd: String = if (boardDescription ==""". . o o o . .
@@ -246,7 +238,7 @@ o o o o o o o
 					n
 				}
 
-				def getEquivalentFields(field: Long): Iterable[Long] = {
+				def getEquivalentFields(field: Long) = {
 					val output = new com.googlecode.pegsolitaire.LongHashSet(8)
 
 					val n    = field
@@ -389,7 +381,11 @@ o o o o o o o
 		} else {
 			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
 					def getNormalform(field: Long) = field
-					def getEquivalentFields(field: Long): Iterable[Long] = List(field)
+					def getEquivalentFields(field: Long) = {
+						val r = new com.googlecode.pegsolitaire.LongHashSet
+						r += field
+						r
+					}
 			}"""
 		}
 		interpreter.interpret(cmd)
@@ -414,10 +410,10 @@ o o o o o o o
 
 		for(i <- 0 until length) {
 			val newElement = base ^ (1L<<i)
-			addToLongHashSet(newElement, hashSet)
+			hashSet += boardHelper.getNormalform(newElement)
 		}
 
-		hashSet.toList
+		hashSet
 	}
 
 	/**
@@ -437,44 +433,39 @@ o o o o o o o
 	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
-  private final def calculateRelatedFields(checkfield: Long, field: Long): Iterable[Long] = {
-		var result = List[Long]()
-		applyMoves(checkfield, field) { result ::= _ }
-    result
-	}
-
-	/**
-	 * @return complete follower list
-	 */
-	final def calculateFollower(field: Long): Iterable[Long] = calculateRelatedFields(field, field)
-
-	/**
-	 * @return complete predecessor list
-	 */
-	final def calculatePredecessor(field: Long): Iterable[Long] = calculateRelatedFields(~field, field)
-
-	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-    val result = calculateRelatedFields(checkfield, field)
-
-    result.foreach{ addToLongHashSet(_, solutions) }
-		!result.isEmpty
+	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet) {
+		var i = 0
+		val size = movemask_size
+		while (i < size) {
+			val n = applyMove(checkfield, field, i)
+			if (n != Long.MinValue)
+				solutions += n
+			i += 1
+		}
 	}
 
 	/**
 	 * @return true : follower was found
 	 */
-	final def addFollower(field: Long, solutions: LongHashSet): Boolean = addRelatedFields(field, field, solutions)
+	final def addFollower(field: Long, solutions: LongHashSet) = addRelatedFields(field, field, solutions)
 
 	/**
 	 * @return true : predecessor was found
 	 */
-	final def addPredecessor(field: Long, solutions: LongHashSet): Boolean = addRelatedFields(~field, field, solutions)
+	final def addPredecessor(field: Long, solutions: LongHashSet) = addRelatedFields(~field, field, solutions)
 
 	/**
 	 * return true if field has a follower in the solutions HashSet
 	 */
 	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-		applyMoves(checkfield, field) { n => if (solutions.contains(boardHelper.getNormalform(n))) return true }
+		var i = 0
+		val size = movemask_size
+		while (i < size) {
+			val n = applyMove(checkfield, field, i)
+			if (n != Long.MinValue && solutions.contains(n))
+				return true
+			i += 1
+		}
 		false
 	}
 
@@ -483,31 +474,41 @@ o o o o o o o
 	final def hasPredecessor(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(~field, field, solutions)
 
 	/**
-	 * @return all related fields that are in the solutions HashSet
+	 * you may want to call getComplete list on the result
 	 */
-	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): Iterable[Long] = {
+	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
 		var result = new LongHashSet
-		applyMoves(checkfield, field) { n => if (searchSet.contains(boardHelper.getNormalform(n))) result += n}
+		var i = 0
+		val size = movemask_size
+		while (i < size) {
+			val n = applyMove(checkfield, field, i)
+			if (n != Long.MinValue && result.contains(n))
+				result += n
+			i += 1
+		}
 		result
 	}
 
-	final def getFollower(field: Long, searchSet: LongHashSet): Iterable[Long] = getRelatedFields(field, field, searchSet)
+	final def getFollower(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(field, field, searchSet)
 
-	final def getPredecessor(field: Long, searchSet: LongHashSet): Iterable[Long] = getRelatedFields(~field, field, searchSet)
-
-	/**
-	 * Add a field into the hashSet, if isInLongHashSet returns false
-	 *
-	 * @return true if the field was really added
-	 */
-	 final def addToLongHashSet(field: Long, hashSet: LongHashSet): Boolean = hashSet.add(boardHelper.getNormalform(field))
+	final def getPredecessor(field: Long, searchSet: LongHashSet): LongHashSet = getRelatedFields(~field, field, searchSet)
 
 	/**
 	 * @return a complete list with all equivalent fields for the fields HashSet
 	 */
-	def getCompleteList(fields: Iterable[Long]): Iterable[Long] = {
+	def getCompleteList(fields: LongHashSet): LongHashSet = {
 		val output = new LongHashSet
 		fields foreach ( output += boardHelper.getEquivalentFields(_) )
 		output
 	}
+	
+	private final def applyMove(checkfield: Long, field: Long, movemaskid: Int): Long = {
+		val mask = movemask(movemaskid)
+		val tmp = checkfield & mask
+		if (tmp == checkmask1(movemaskid) || tmp == checkmask2(movemaskid))
+			boardHelper.getNormalform(field ^ mask)
+		else
+			Long.MinValue
+	}
+
 }
