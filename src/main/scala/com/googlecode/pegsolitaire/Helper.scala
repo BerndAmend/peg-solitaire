@@ -148,7 +148,7 @@ object Helper {
 }
 
 class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: Double, callback: Double => Unit) extends java.io.FilterInputStream(input) {
-    private var size = in.available
+	private var size = in.available
 	private var nread = 0L
 	private var lastPercent = -displayStep
 
@@ -163,7 +163,6 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
 	    data
     }
 
-
     /**
      * Overrides <code>FilterInputStream.read</code>
      * to update the progress monitor after the read.
@@ -174,7 +173,6 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
 	    callCallback
         nr
     }
-
 
     /**
      * Overrides <code>FilterInputStream.read</code>
@@ -187,7 +185,6 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
         nr
     }
 
-
     /**
      * Overrides <code>FilterInputStream.skip</code>
      * to update the progress monitor after the skip.
@@ -199,7 +196,6 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
         nr
     }
 
-
     /**
      * Overrides <code>FilterInputStream.close</code>
      * to close the progress monitor as well as the stream.
@@ -207,7 +203,6 @@ class ProgressCallbackInputStream(input: java.io.InputStream, val displayStep: D
     override def close {
         in.close
     }
-
 
     /**
      * Overrides <code>FilterInputStream.reset</code>
