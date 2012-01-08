@@ -57,7 +57,7 @@ object Boards extends Enumeration {
 	val Holes15 = Value("15holes")
 	val User = Value("user")
 
-	val EnglishBoard = new Board(
+	lazy val EnglishBoard = new Board(
 """. . o o o . .
 . . o o o . .
 o o o o o o o
@@ -66,7 +66,7 @@ o o o o o o o
 . . o o o . .
 . . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
 
-	val EuropeanBoard = new Board(
+	lazy val EuropeanBoard = new Board(
 """. . o o o . .
 . o o o o o .
 o o o o o o o
@@ -75,7 +75,7 @@ o o o o o o o
 . o o o o o .
 . . o o o . .""", Array(MoveDirections.Horizontal, MoveDirections.Vertical))
 
-	val Holes15Board = new Board(
+	lazy val Holes15Board = new Board(
 """o . . . .
 o o . . .
 o o o . .
