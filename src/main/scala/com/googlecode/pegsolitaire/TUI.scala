@@ -30,7 +30,10 @@ class ConsolenStatusObserver extends StatusObserver {
 	def begin_forward_calculation_step(removed_pegs: Int) = printColoredText("search fields with " + removed_pegs + " removed pegs", Color.green)
 	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
 		printColoredText(", found " + solution.size + " fields", Color.green)
-		printlnlnDebug(" " + solution.depth)
+		if(Helper.enableDebug)
+			printlnlnDebug(" " + solution.depth)
+		else
+			println()
 	}
 
 	def begin_backward_cleaning_step(removed_pegs: Int) = printColoredText("clean field list with " + removed_pegs + " removed pegs", Color.green)
