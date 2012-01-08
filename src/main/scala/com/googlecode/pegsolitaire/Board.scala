@@ -217,10 +217,10 @@ o o o o o o o
 					val n90  = rotate90(field)
 					if(n90 < n) n = n90
 
-					val n180 = rotate180(field)
+					val n180 = rotate90(n90)
 					if(n180 < n) n = n180
 
-					val n270 = rotate270(field)
+					val n270 = rotate90(n180)
 					if(n270 < n) n = n270
 
 					val v    = vflip(field)
@@ -243,8 +243,8 @@ o o o o o o o
 
 					val n    = field
 					val n90  = rotate90(n)
-					val n180 = rotate180(n)
-					val n270 = rotate270(n)
+					val n180 = rotate90(n90)
+					val n270 = rotate90(n180)
 
 					val v    = vflip(n)
 					val v90  = vflip(n90)
@@ -304,9 +304,6 @@ o o o o o o o
 				| ((field & (1L <<  5)) <<  2) | ((field & (1L <<  4)) << 10) | ((field & (1L <<  3)) << 18)
 				| ((field & (1L <<  2)) <<  4) | ((field & (1L <<  1)) << 12) | ((field & (1L <<  0)) << 20)
 				)
-
-				private def rotate180(field: Long): Long = rotate90(rotate90(field))
-				private def rotate270(field: Long): Long = rotate90(rotate90(rotate90(field)))
 
 				/**
 				 * output 90:
