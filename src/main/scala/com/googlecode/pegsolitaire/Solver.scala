@@ -391,11 +391,10 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	private def calculateForward (sol: Int): Unit = calculateNextStep(sol, -1, true) //game.addFollower)
 	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol,  1, false) //game.addPredecessor)
 
-	@specialized(AnyRef)
   private def calculateNextStep(sol: Int, next: Int, follower: Boolean) {
 	  val results = (0 until thread_count).map {
       threadID => future[Boolean] {
-        val iter = solution(sol + next).iteratorRead(threadID, thread_count)
+        val iter = solution(sol + next).iterator(threadID, thread_count)
         var result = new LongHashSet()
 	      if(follower) {
 	        while (iter.hasNext) {
@@ -429,7 +428,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 				threadID => future[(Long, LongHashSet)] {
 					var deadEndFields = 0L
 					val current = solution(i)
-					val iter = solution(i + next).iteratorRead(threadID, thread_count)
+					val iter = solution(i + next).iterator(threadID, thread_count)
 					var result = new LongHashSet
 					if(follower) {
 						while (iter.hasNext) {

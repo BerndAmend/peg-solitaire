@@ -63,28 +63,24 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 */
 	def used = _size.toDouble / table.length.toDouble
 
-	/**
-	 * Backing store for all the objects; transient due to custom serialization.
-	 * Default access to avoid synthetic accessors from inner classes.
-	 */
-	protected var table = t
-	protected var table_length_minus_1 = (t.length - 1)
+	private var table = t
+	private var table_length_minus_1 = (t.length - 1)
 
   /**
    * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
    * e.g. to read multiple elements from a HashSet at a time without synchronization
    */
-	sealed class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
+	final class HashSetIterator(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
     require(groupID >= 0)
     require(groupSize > 0)
     require(groupID < groupSize)
-    
-		protected var index = groupID
-		protected[LongHashSet] var last = -1
+
+		private var _index = groupID
+		private val table_length = table.length
 
 		advanceToItem()
 
-		final def hasNext = index < table.length
+		final def hasNext = _index < table_length
 
 		final def next: Long = {
 			if (!hasNext)
@@ -97,34 +93,16 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		 * call this function ONLY if you really know what you are doing
 		 */
 		final def unsafe_next: Long = {
-			last = index
-			val toReturn = table(index)
-			index += groupSize
+			val toReturn = table(_index)
+			_index += groupSize
 			advanceToItem()
 			toReturn
 		}
 
 		private final def advanceToItem() {
-			while (index < table.length) {
-				if (table(index) != LongHashSet.INVALID_ELEMENT)
-					return
-				index += groupSize
+			while (_index < table_length && (table(_index) == LongHashSet.INVALID_ELEMENT)) {
+				_index += groupSize
 			}
-		}
-	}
-
-	final class HashSetIterator extends HashSetIteratorRead(0,1) {
-
-    @throws(classOf[IllegalStateException])
-		final def remove() {
-			if (last < 0)
-				throw new java.lang.IllegalStateException()
-
-			internalRemove(last)
-			if (table(last) != LongHashSet.INVALID_ELEMENT)
-				index = last
-
-			last = -1
 		}
 	}
 
@@ -147,18 +125,20 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 			addAll(c)
 		}
 
-	def isEmpty = _size == 0
+	final def isEmpty = _size == 0
 
-	def +=(c: Iterable[Long]) = addAll(c)
+	final def +=(e: Long) = add(e)
 
-	def +=(c: LongHashSet) = addAll(c)
+	final def +=(c: Iterable[Long]) = addAll(c)
 
-	def addAll(c: Iterable[Long]) = {
+	final def +=(c: LongHashSet) = addAll(c)
+
+	final def addAll(c: Iterable[Long]) {
 		for (e <- c)
 			add(e)
 	}
 
-	def addAll(c: LongHashSet) = {
+	final def addAll(c: LongHashSet) {
 		ensureSizeFor(_size + c.size)
 		internal_addAll(c.table)
 	}
@@ -168,23 +148,22 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * having to synthesize a collection in    { @link Sets }.
 	 * ignores INVALID_ELEMENT entries in the Array
 	 */
-	def addAll(elements: Array[Long]) {
+	final def addAll(elements: Array[Long]) {
 		ensureSizeFor(_size + elements.length)
 		internal_addAll(elements)
 	}
 
-	def +=(e: Long) = add(e)
-
-	def add(e: Long) = {
+	final def add(e: Long) {
 		require( e != LongHashSet.INVALID_ELEMENT)
 		ensureSizeFor(size + 1)
 		internal_add(e)
 	}
 
 	// add the elements without checking if there is enough space
-	private final def internal_addAll(elements: Array[Long]) = {
+	private final def internal_addAll(elements: Array[Long]) {
+		val length = elements.length
 		var i = 0
-		while(i<elements.length) {
+		while(i<length) {
 			if(elements(i) != LongHashSet.INVALID_ELEMENT)
 				internal_add(elements(i))
 			i += 1
@@ -192,74 +171,48 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	}
 
 	// adds the element without checking if there is enough space or if e is invalid
-	private final def internal_add(e: Long) = {
+	private final def internal_add(e: Long) {
 		val index = findOrEmpty(e)
 		if (table(index) == LongHashSet.INVALID_ELEMENT) {
 			_size += 1
 			table(index) = e
-			true
-		} else
-			false
+		}
 	}
 
-	def shrink = ensureSizeFor(_size, true)
+	final def clear() {
+		java.util.Arrays.fill(table, LongHashSet.INVALID_ELEMENT)
+		_size = 0
+	}
 
-	def clear() {
+	final def clear_and_free() {
 		table = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE)
 		table_length_minus_1 = table.length - 1
 		_size = 0
 	}
 
-	def contains(o: Long) = find(o) >= 0
+	final def contains(o: Long) = table(findOrEmpty(o)) != LongHashSet.INVALID_ELEMENT
 
-	def iterator = new HashSetIterator
-  def iteratorRead = new HashSetIteratorRead
-  def iteratorRead(groupID: Int, groupSize: Int) = new HashSetIteratorRead(groupID, groupSize)
-
-	def remove(o: Long): Boolean = {
-		val index = find(o)
-		if (index < 0)
-			return false
-		internalRemove(index)
-		true
-	}
-
-	/**
-	 * Removes the item at the specified index, and performs internal management
-	 * to make sure we don't wind up with a hole in the table. Default access to
-	 * avoid synthetic accessors from inner classes.
-	 */
-	private def internalRemove(index: Int) {
-		table(index) = LongHashSet.INVALID_ELEMENT
-		_size -= 1
-		plugHole(index)
-	}
+	final def iterator = new HashSetIterator
+  final def iterator(groupID: Int, groupSize: Int) = new HashSetIterator(groupID, groupSize)
 
 	/**
 	 * Ensures the set is large enough to contain the specified number of entries.
 	 */
-	private def ensureSizeFor(expectedSize: Int, allowShrink: Boolean=false) {
-		if(!allowShrink && table.length * 3 >= expectedSize * 4)
+	private final def ensureSizeFor(expectedSize: Int) {
+		if(table.length * 3 >= expectedSize * 4)
 			return
 
 		// calculate table size
-		var newCapacity = if(allowShrink) LongHashSet.INITIAL_TABLE_SIZE else table.length
+		var newCapacity = table.length
 		while (newCapacity * 3 < expectedSize * 4)
 			newCapacity <<= 1
 
-		if (newCapacity == table.length) // unchanged
-			return
-
-		if(!allowShrink && newCapacity < table.length) // shrink only if requested
-			return
-
-		//println("LongHashSet: fillState before=" + used + " after=" + newHashSet.used)
 		val old_table = table
 		val old_size = _size
 		table = LongHashSet.allocateTableMemory(newCapacity)
 		table_length_minus_1 = table.length - 1
 		_size = 0
-		addAll(old_table)
+		internal_addAll(old_table)
 		require(_size == old_size)
 	}
 
@@ -267,7 +220,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * Returns the index in the table at which a particular item resides, or -1 if
 	 * the item is not in the table.
 	 */
-	private def find(o: Long): Int = {
+	private final def find(o: Long): Int = {
 		val index = findOrEmpty(o)
 		if(table(index) == LongHashSet.INVALID_ELEMENT)
 			-1
@@ -279,9 +232,9 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * Returns the index in the table at which a particular item resides, or the
 	 * index of an empty slot in the table where this item should be inserted if
 	 * it is not already in the table.
-	 * @return index (-1==you messed with the implementation or found a bug)
+	 * @return index
 	 */
-	private def findOrEmpty(o: Long): Int = {
+	private final def findOrEmpty(o: Long): Int = {
 		var index = getIndex(o)
 		while (true) { // if this loop becomes an infinite loop, there is no free element in the table (this should never happen)
 			var existing = table(index)
@@ -292,8 +245,9 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 			if (index == table.length)
 				index = 0
 		}
-		-1 // there is no free place left,
+
 		// this should not happen since the table should never be filled so much
+		throw new Exception("Something went terrible wrong")
 	}
 
 	private final def getIndex(value: Long): Int = {
@@ -307,71 +261,21 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		h & table_length_minus_1
 	}
 
-	/**
-	 * Tricky, we left a hole in the map, which we have to fill. The only way to
-	 * do this is to search forwards through the map shuffling back values that
-	 * match this index until we hit a null.
-	 */
-	private def plugHole(_hole: Int) {
-		var hole = _hole
-		var index = hole + 1
-		if (index == table.length)
-			index = 0
-
-		while (table(index) != LongHashSet.INVALID_ELEMENT) {
-			val targetIndex = getIndex(table(index))
-			if (hole < index) {
-				/*
-				 * "Normal" case, the index is past the hole and the "bad range" is from
-				 * hole (exclusive) to index (inclusive).
-				 */
-				if (!(hole < targetIndex && targetIndex <= index)) {
-					// Plug it!
-					table(hole) = table(index)
-					table(index) = LongHashSet.INVALID_ELEMENT
-					hole = index
-				}
-			} else {
-				/*
-				 * "Wrapped" case, the index is before the hole (we've wrapped) and the
-				 * "good range" is from index (exclusive) to hole (inclusive).
-				 */
-				if (index < targetIndex && targetIndex <= hole) {
-					// Plug it!
-					table(hole) = table(index)
-					table(index) = LongHashSet.INVALID_ELEMENT
-					hole = index
-				}
-			}
-			index += 1
-			if (index == table.length)
-				index = 0
-		}
-	}
-
-	def toHashSet = {
-		val r = new scala.collection.mutable.HashSet[Long]
-
-		val iter = iteratorRead
+	final def foreach(func: Long => Unit) {
+		val iter = iterator
 
 		while (iter.hasNext) {
-			r add iter.next
-		}
-
-		r
-	}
-
-	def foreach(func: Long => Unit) {
-		val iter = iteratorRead
-
-		while (iter.hasNext) {
-			func(iter.next)
+			func(iter.unsafe_next)
 		}
 	}
 	
-	def toList = {
+	final def toList = {
 		var r = List[Long]()
-		foreach( r ::= _)
+		val iter = iterator
+
+		while (iter.hasNext) {
+			r ::= iter.unsafe_next
+		}
 		r
 	}
 
@@ -383,31 +287,35 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * @return the search deep required to access elements (average, max, oneAccessPercent)
 	 */
 	def depth: Depth = {
-
-		var averageValue = 0.0
+		var averageValue = BigDecimal(0)
 		var maxValue = 0
 		var oneAccessElements = 0
 
-		val iter = iteratorRead
-		val tableSize = table.size
-		while (iter.hasNext) {
-			val v = iter.unsafe_next
-			val index = getIndex(v); // where the element should be
-			var d = 1
-			if (index == iter.last)
-				oneAccessElements += 1
-			else if (index < iter.last)
-				d += iter.last - index
-			else
-				d += iter.last + (tableSize - index)
+		var index = 0
+		val table_length = table.length
+		while (index < table_length) {
+			val v = table(index)
+			val designated_index = getIndex(v) // where the element should be
 
-			maxValue = math.max(maxValue, d)
-			averageValue += d
+			if (v != LongHashSet.INVALID_ELEMENT) {
+				var d = 1
+				if (index == designated_index)
+					oneAccessElements += 1
+				else if (designated_index < index) {
+					d += index - designated_index
+				}else {
+					d += index + (table_length - designated_index)
+				}
+
+				maxValue = math.max(maxValue, d)
+				averageValue += d
+			}
+			index += 1
 		}
 
-		averageValue /= size.toDouble
-
-		Depth(averageValue, maxValue, oneAccessElements.toDouble / size.toDouble)
+		Depth((averageValue / size).toDouble, maxValue, oneAccessElements.toDouble / size.toDouble)
 	}
 
 }
+
+
