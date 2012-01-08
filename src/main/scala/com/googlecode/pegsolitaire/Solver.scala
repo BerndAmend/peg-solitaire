@@ -399,11 +399,11 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
         var result = new LongHashSet()
 	      if(follower) {
 	        while (iter.hasNext) {
-		        game.addFollower(iter.next, result)
+		        game.addFollower(iter.unsafe_next, result)
           }
 	      } else {
 		      while (iter.hasNext) {
-			      game.addPredecessor(iter.next, result)
+			      game.addPredecessor(iter.unsafe_next, result)
           }
 	      }
 	      val current = solution(sol)
@@ -433,7 +433,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 					var result = new LongHashSet
 					if(follower) {
 						while (iter.hasNext) {
-							val elem = iter.next
+							val elem = iter.unsafe_next
 							if (game.hasFollower(elem, current)) {
 								result += elem
 							} else {
@@ -442,7 +442,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 						}
 					} else {
 						while (iter.hasNext) {
-							val elem = iter.next
+							val elem = iter.unsafe_next
 							if (game.hasPredecessor(elem, current)) {
 								result += elem
 							} else {

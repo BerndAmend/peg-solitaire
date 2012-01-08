@@ -30,7 +30,7 @@ final object LongHashSet {
 	 * started with a size of 2, we'd have to expand as soon as the second item
 	 * was added.
 	 */
-	final val INITIAL_TABLE_SIZE = 1 << 8
+	final val INITIAL_TABLE_SIZE = 1 << 5
 
 	final val INVALID_ELEMENT = Long.MinValue
 
@@ -68,12 +68,13 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * Default access to avoid synthetic accessors from inner classes.
 	 */
 	protected var table = t
+	protected var table_length_minus_1 = (t.length - 1)
 
   /**
    * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
    * e.g. to read multiple elements from a HashSet at a time without synchronization
    */
-	class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
+	sealed class HashSetIteratorRead(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
     require(groupID >= 0)
     require(groupSize > 0)
     require(groupID < groupSize)
@@ -83,12 +84,19 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 
 		advanceToItem()
 
-		def hasNext = index < table.length
+		final def hasNext = index < table.length
 
-		def next: Long = {
+		final def next: Long = {
 			if (!hasNext)
 				throw new java.util.NoSuchElementException()
 
+			unsafe_next
+		}
+
+		/**
+		 * call this function ONLY if you really know what you are doing
+		 */
+		final def unsafe_next: Long = {
 			last = index
 			val toReturn = table(index)
 			index += groupSize
@@ -96,7 +104,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 			toReturn
 		}
 
-		private def advanceToItem() {
+		private final def advanceToItem() {
 			while (index < table.length) {
 				if (table(index) != LongHashSet.INVALID_ELEMENT)
 					return
@@ -105,10 +113,10 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		}
 	}
 
-	class HashSetIterator extends HashSetIteratorRead(0,1) {
+	final class HashSetIterator extends HashSetIteratorRead(0,1) {
 
     @throws(classOf[IllegalStateException])
-		def remove() {
+		final def remove() {
 			if (last < 0)
 				throw new java.lang.IllegalStateException()
 
@@ -198,6 +206,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 
 	def clear() {
 		table = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE)
+		table_length_minus_1 = table.length - 1
 		_size = 0
 	}
 
@@ -248,6 +257,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		val old_table = table
 		val old_size = _size
 		table = LongHashSet.allocateTableMemory(newCapacity)
+		table_length_minus_1 = table.length - 1
 		_size = 0
 		addAll(old_table)
 		require(_size == old_size)
@@ -286,7 +296,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		// this should not happen since the table should never be filled so much
 	}
 
-	private def getIndex(value: Long): Int = {
+	private final def getIndex(value: Long): Int = {
 		var h = (value ^ (value >>> 32)).asInstanceOf[Int] // hashCode
 		// Copied from Apache's AbstractHashedMap; prevents power-of-two collisions.
 		h += ~(h << 9)
@@ -294,7 +304,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		h += (h << 4)
 		h ^= (h >>> 10)
 		// Power of two trick.
-		h & (table.length - 1)
+		h & table_length_minus_1
 	}
 
 	/**
@@ -381,7 +391,7 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		val iter = iteratorRead
 		val tableSize = table.size
 		while (iter.hasNext) {
-			val v = iter.next
+			val v = iter.unsafe_next
 			val index = getIndex(v); // where the element should be
 			var d = 1
 			if (index == iter.last)
