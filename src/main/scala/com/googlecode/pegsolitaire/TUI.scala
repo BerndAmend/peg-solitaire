@@ -64,7 +64,7 @@ object TUI {
 					"                         user: create your own board!\n" +
 					"                         english: standard english\n" +
 					"                         15holes: simple test board\n" +
-					"                         euro: standard european (not optimized)\n" +
+					"                         euro: standard european\n" +
 					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
 					"  -full                calculate all solutions for all possible start fields\n" +
 					"  -select              limit startfields to a user defined selection\n" +
@@ -223,6 +223,11 @@ object TUI {
 				readLine
 				sol
 			}
+			
+			if(Helper.enableDebug) {
+				println(solitaireType.debug_output)
+			}
+			
 			val selection: Iterable[Long] = if(arg_select) {
 				println("Select one or more start fields:")
 				selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
@@ -266,6 +271,9 @@ object TUI {
 			println("\nCount how many ways are available to solve the board (this may take a while)")
 			printlnColoredText("There are " + solitaire.countPossibleGames + " ways to a solution.", Color.blue)
 		}
+
+		println("Possible solutions:")
+		printFields(solitaire.game, solitaire.getEnd.toList)
 
 		if(!arg_save.isEmpty)
 			solitaire.save(arg_save)

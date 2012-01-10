@@ -47,32 +47,25 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 	val length = boardDescription.length - boardDescription.replaceAll("o","").length
 
-	require(length < 63, "Only 63 field elements are currently supported")
+	require(length < 63, "Max 63 field elements are currently supported")
 
 	private val printMask = boardDescription.replaceAll("\\.", " ").replaceAll("o", "P")
 
 	/**
 	 * Describes how (x,y)-positions (map-key) inside the boardDescription correspond
 	 * to the bit position used to represent the board
-	 *
-	 * The lookUpTable is calculated inside the boardDescriptionArray body
 	 */
-	protected val lookUpTable = new scala.collection.mutable.HashMap[(Int,Int), Int]
-
-	/**
-	 * into a Boolean array converted representation of the provided boardDescription 
-	 */
-	private val boardDescriptionArray: Array[Array[Boolean]] = {
+	private val lookUpTable: Array[Array[Int]] = {
 		val cleanString = boardDescription.replaceAll(" ", "").replaceAll("\t", "").replaceAll("o", "1").replaceAll("\\.", "0").split("\n")
 
 		require(cleanString.length > 1, "cleanString=" + cleanString)
 
 		// check if all lines have the same length
-		var lineLength = cleanString(0).length
+		val lineLength = cleanString(0).length
 
 		require(lineLength > 1)
 
-		val result = Array.fill[Boolean](cleanString.length, lineLength)(false)
+		val result = Array.fill[Int](cleanString.length, lineLength)(-1)
 
 		var pos = length-1
 		var line = 0
@@ -82,9 +75,8 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			val currentLine = result(line)
 
 			for(i <- 0 until lineLength) {
-				currentLine(i) = (s(i) == '1')
-				if(currentLine(i)) {
-					lookUpTable((i,line)) = pos
+				if(s(i) == '1') {
+					currentLine(i) = pos
 					pos -= 1
 				}
 			}
@@ -107,41 +99,41 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		var checkmask2 = List[Long]()
 
 		def addMove(pos1:(Int,Int), pos2:(Int,Int), pos3:(Int,Int)) {
-			movemask   ::= ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
-			checkmask1 ::= ((1L<<lookUpTable(pos1)) | (1L<<lookUpTable(pos2)))
-			checkmask2 ::= ((1L<<lookUpTable(pos2)) | (1L<<lookUpTable(pos3)))
+			movemask   ::= ((1L<<lookUpTable(pos1._2)(pos1._1)) | (1L<<lookUpTable(pos2._2)(pos2._1)) | (1L<<lookUpTable(pos3._2)(pos3._1)))
+			checkmask1 ::= ((1L<<lookUpTable(pos1._2)(pos1._1)) | (1L<<lookUpTable(pos2._2)(pos2._1)))
+			checkmask2 ::= ((1L<<lookUpTable(pos2._2)(pos2._1)) | (1L<<lookUpTable(pos3._2)(pos3._1)))
 		}
 
-		for(y <- 0 until boardDescriptionArray.length) {
-			for(x <- 0 until boardDescriptionArray(0).length) {
-				val current = boardDescriptionArray(y)(x)
+		for(y <- 0 until lookUpTable.length) {
+			for(x <- 0 until lookUpTable(0).length) {
+				val current = lookUpTable(y)(x) != -1
 
 				moveDirections foreach {
 					_ match {
 						case MoveDirections.Horizontal =>
-							val right1 = if(x+1 < boardDescriptionArray(0).length) boardDescriptionArray(y)(x+1) else false
-							val right2 = if(x+2 < boardDescriptionArray(0).length) boardDescriptionArray(y)(x+2) else false
+							val right1 = if(x+1 < lookUpTable(0).length) (lookUpTable(y)(x+1) != -1) else false
+							val right2 = if(x+2 < lookUpTable(0).length) (lookUpTable(y)(x+2) != -1) else false
 
 							if(current && right1 && right2)
 								addMove((x,y), (x+1,y), (x+2,y))
 
 						case MoveDirections.Vertical =>
-							val down1 = if(y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x) else false
-							val down2 = if(y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x) else false
+							val down1 = if(y+1 < lookUpTable.length) (lookUpTable(y+1)(x) != -1) else false
+							val down2 = if(y+2 < lookUpTable.length) (lookUpTable(y+2)(x) != -1) else false
 
 							if(current && down1 && down2)
 								addMove((x,y), (x,y+1), (x,y+2))
 
 						case MoveDirections.LeftDiagonal =>
-							val leftDiagonal1 = if(x+1 < boardDescriptionArray(0).length && y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x+1) else false
-							val leftDiagonal2 = if(x+2 < boardDescriptionArray(0).length && y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x+2) else false
+							val leftDiagonal1 = if(x+1 < lookUpTable(0).length && y+1 < lookUpTable.length) (lookUpTable(y+1)(x+1) != -1) else false
+							val leftDiagonal2 = if(x+2 < lookUpTable(0).length && y+2 < lookUpTable.length) (lookUpTable(y+2)(x+2) != -1) else false
 
 						if(current && leftDiagonal1 && leftDiagonal2)
 								addMove((x,y), (x+1,y+1), (x+2,y+2))
 
 						case MoveDirections.RightDiagonal =>
-							val rightDiagonal1 = if(x-1 >= 0 && y+1 < boardDescriptionArray.length) boardDescriptionArray(y+1)(x-1) else false
-							val rightDiagonal2 = if(x-2 >= 0 && y+2 < boardDescriptionArray.length) boardDescriptionArray(y+2)(x-2) else false
+							val rightDiagonal1 = if(x-1 >= 0 && y+1 < lookUpTable.length) (lookUpTable(y+1)(x-1) != -1) else false
+							val rightDiagonal2 = if(x-2 >= 0 && y+2 < lookUpTable.length) (lookUpTable(y+2)(x-2) != -1) else false
 
 							if(current && rightDiagonal1 && rightDiagonal2)
 								addMove((x,y), (x-1,y+1), (x-2,y+2))
@@ -188,6 +180,123 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	val checkmask1 = masks._2   // ...110... required to check if a move is possible
 	val checkmask2 = masks._3   // ...011... required to check if a move is possible
 	val movemask_size = movemask.size
+	
+	private def vflip(in: Array[Array[Int]]): Array[Array[Int]] = in map {_.reverse}
+	private def hflip(in: Array[Array[Int]]): Array[Array[Int]] = vflip(in.transpose).transpose
+	private def rotate90(in: Array[Array[Int]]): Array[Array[Int]] = vflip(in.transpose)
+	private def rotate180(in: Array[Array[Int]]): Array[Array[Int]] = vflip(hflip(in))
+	private def rotate270(in: Array[Array[Int]]): Array[Array[Int]] = hflip(in.transpose)
+	private def vflip_rotate90(in: Array[Array[Int]]): Array[Array[Int]] = vflip(rotate90(in))
+	private def hflip_rotate90(in: Array[Array[Int]]): Array[Array[Int]] = hflip(rotate90(in))
+	
+	private def have_equal_shape(in1: Array[Array[Int]], in2: Array[Array[Int]]): Boolean = {
+		if(in1.length != in2.length || in1(0).length != in2(0).length)
+			return false
+
+		for(y <- 0 until in1.length;
+				x <- 0 until in2(0).length) {
+				if((in1(y)(x) == -1 || in2(y)(x) == -1) && in1(y)(x) != in2(y)(x))
+					return false
+		}
+		true
+	}
+	
+	private val movemask_transformation_tests = movemask map {toArray(_)}
+	
+	private def is_transformation_valid(transformation: Array[Array[Int]] => Array[Array[Int]]): Boolean = {
+		if (have_equal_shape(lookUpTable, transformation(lookUpTable)))
+			true
+		else
+			false
+
+		movemask_transformation_tests forall{i => movemask.contains(toLong(transformation(i)))}
+	}
+
+	private val _board_helper_sourcecode: String = {
+		val get_normalform = new StringBuilder
+		val get_equivalent_fields = new StringBuilder
+
+		get_normalform append "def getNormalform(field: Long): Long = {\n"
+		get_normalform append "var n = field\n\n"
+
+		get_equivalent_fields append "def getEquivalentFields(field: Long) = {\n"
+		get_equivalent_fields append "val n = new com.googlecode.pegsolitaire.LongHashSet(8)\n"
+		get_equivalent_fields append "n += field\n\n"
+
+		if(is_transformation_valid(rotate180)) {
+			val c_rotate180 = CodeGenerator(rotate180(lookUpTable))
+			get_normalform append "val n180 = " + c_rotate180 + "\n"
+			get_normalform append "if(n180 < n) n = n180\n\n"
+
+			get_equivalent_fields append "n += " + c_rotate180 + "\n"
+		}
+
+		if(is_transformation_valid(rotate90)) {
+			val c_rotate90 = CodeGenerator(rotate90(lookUpTable))
+			get_normalform append "val n90 = " + c_rotate90 + "\n"
+			get_normalform append "if(n90 < n) n = n90\n\n"
+
+			get_equivalent_fields append "n += " + c_rotate90 + "\n"
+		}
+
+		if(is_transformation_valid(rotate270)) {
+			val c_rotate270 = CodeGenerator(rotate270(lookUpTable))
+			get_normalform append "val n270 = " + c_rotate270 + "\n"
+			get_normalform append "if(n270 < n) n = n270\n\n"
+
+			get_equivalent_fields append "n += " + c_rotate270 + "\n"
+		}
+
+		if(is_transformation_valid(vflip)) {
+			val c_vflip = CodeGenerator(vflip(lookUpTable))
+			get_normalform append "val v = " + c_vflip + "\n"
+			get_normalform append "if(v < n) n = v\n\n"
+
+			get_equivalent_fields append "n += " + c_vflip + "\n"
+		}
+
+		if(is_transformation_valid(hflip)) {
+			val c_hflip = CodeGenerator(hflip(lookUpTable))
+			get_normalform append "val h = " + c_hflip + "\n"
+			get_normalform append "if(h < n) n = h\n\n"
+
+			get_equivalent_fields append "n += " + c_hflip + "\n"
+		}
+
+		if(is_transformation_valid(vflip_rotate90)) {
+			val c_v90 = CodeGenerator(vflip_rotate90(lookUpTable))
+			get_normalform append "val v90 = " + c_v90 + "\n"
+			get_normalform append "if(v90 < n) n = v90\n\n"
+
+			get_equivalent_fields append "n += " + c_v90 + "\n"
+		}
+
+		if(is_transformation_valid(hflip_rotate90)) {
+			val c_h90 = CodeGenerator(hflip_rotate90(lookUpTable))
+			get_normalform append "val h90 = " + c_h90 + "\n"
+			get_normalform append "if(h90 < n) n = h90\n\n"
+
+			get_equivalent_fields append "n += " + c_h90 + "\n"
+		}
+
+		get_normalform append "n\n"
+		get_normalform append "}\n"
+
+		get_equivalent_fields append "n\n"
+		get_equivalent_fields append "}\n"
+		
+		
+		val r = new StringBuilder
+		
+		r append "result(0) = new com.googlecode.pegsolitaire.BoardHelper {\n"
+		r append get_normalform.result()
+		r append get_equivalent_fields.result()
+		r append "}\n"
+
+		r.result()
+	}
+
+	def board_helper_sourcecode: String = _board_helper_sourcecode
 
 	private val interpreter = {
 		val settings = new scala.tools.nsc.Settings
@@ -202,190 +311,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	val boardHelper: BoardHelper = {
 		val result = new Array[BoardHelper](1)
 		interpreter.quietBind(scala.tools.nsc.interpreter.NamedParam("result", "Array[com.googlecode.pegsolitaire.BoardHelper]", result))
-		val cmd: String = if (boardDescription ==""". . o o o . .
-. . o o o . .
-o o o o o o o
-o o o o o o o
-o o o o o o o
-. . o o o . .
-. . o o o . .""" && moveDirections.sameElements(Array(MoveDirections.Horizontal, MoveDirections.Vertical))) {
-			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
-				def getNormalform(field: Long): Long = {
-
-          var n = field
-
-					val n90  = rotate90(field)
-					if(n90 < n) n = n90
-
-					val n180 = rotate90(n90)
-					if(n180 < n) n = n180
-
-					val n270 = rotate90(n180)
-					if(n270 < n) n = n270
-
-					val v    = vflip(field)
-					if(v < n) n = v
-
-					val v90  = vflip(n90)
-					if(v90 < n) n = v90
-
-					val v180 = vflip(n180)
-					if(v180 < n) n = v180
-
-					val v270 = vflip(n270)
-					if(v270 < n) n = v270
-
-					n
-				}
-
-				def getEquivalentFields(field: Long) = {
-					val output = new com.googlecode.pegsolitaire.LongHashSet(8)
-
-					val n    = field
-					val n90  = rotate90(n)
-					val n180 = rotate90(n90)
-					val n270 = rotate90(n180)
-
-					val v    = vflip(n)
-					val v90  = vflip(n90)
-					val v180 = vflip(n180)
-					val v270 = vflip(n270)
-
-					output += n
-					output += n90
-					output += n180
-					output += n270
-					output += v
-					output += v90
-					output += v180
-					output += v270
-					//output += hflip(n)
-					//output += hflip(n90)
-					//output += hflip(n180)
-					//output += hflip(n270)
-
-					output
-				}
-
-				/**
-				 *  memory structure
-				 *   0123456
-				 * 0   012
-				 * 1   345
-				 * 2 6789abc
-				 * 3 defghij
-				 * 4 klmnopq
-				 * 5   rst
-				 * 6   uvw
-				 *
-				 * output:
-				 *   0123456
-				 * 0   cjq
-				 * 1   bip
-				 * 2 25ahotw
-				 * 3 149gnsv
-				 * 4 038fmru
-				 * 5   7el
-				 * 6   6dk
-				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
-				 *  c  j  q  b  i  p  2  5  a  h  o  t  w  1  4  9  g  n  s  v  0  3  8 f m r u 7 e l 6 d k
-				 */
-				private def rotate90(field: Long): Long = (
-					((field & (1L << 32)) >> 20) | ((field & (1L << 31)) >> 12) | ((field & (1L << 30)) >>  4)
-				| ((field & (1L << 29)) >> 18) | ((field & (1L << 28)) >> 10) | ((field & (1L << 27)) >>  2)
-				| ((field & (1L << 26)) >> 24) | ((field & (1L << 25)) >> 20) | ((field & (1L << 24)) >> 14)
-				| ((field & (1L << 23)) >>  6) | ((field & (1L << 22)) <<  2) | ((field & (1L << 21)) <<  8)
-				| ((field & (1L << 20)) << 12) | ((field & (1L << 19)) >> 18) | ((field & (1L << 18)) >> 14)
-				| ((field & (1L << 17)) >>  8) |  (field & (1L << 16))        | ((field & (1L << 15)) <<  8)
-				| ((field & (1L << 14)) << 14) | ((field & (1L << 13)) << 18) | ((field & (1L << 12)) >> 12)
-				| ((field & (1L << 11)) >>  8) | ((field & (1L << 10)) >>  2) | ((field & (1L <<  9)) <<  6)
-				| ((field & (1L <<  8)) << 14) | ((field & (1L <<  7)) << 20) | ((field & (1L <<  6)) << 24)
-				| ((field & (1L <<  5)) <<  2) | ((field & (1L <<  4)) << 10) | ((field & (1L <<  3)) << 18)
-				| ((field & (1L <<  2)) <<  4) | ((field & (1L <<  1)) << 12) | ((field & (1L <<  0)) << 20)
-				)
-
-				/**
-				 * output 90:
-				 *   0123456
-				 * 0   210
-				 * 1   543
-				 * 2 cba9876
-				 * 3 jihgfed
-				 * 4 qponmlk
-				 * 5   tsr
-				 * 6   wvu
-				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
-				 *  2  1  0  5  4  3  c  b  a  9  8  7  6  j  i  h  g  f  e  d  q  p  o n m l k t s r w v u
-				 */
-				private def hflip(field: Long): Long = (
-					 ((field & (1L << 32)) >> 2) |  (field & (1L << 31))       | ((field & (1L << 30)) << 2)
-					|((field & (1L << 29)) >> 2) |  (field & (1L << 28))       | ((field & (1L << 27)) << 2)
-					|((field & (1L << 26)) >> 6) | ((field & (1L << 25)) >> 4) | ((field & (1L << 24)) >> 2)
-					| (field & (1L << 23))       | ((field & (1L << 22)) << 2) | ((field & (1L << 21)) << 4)
-					|((field & (1L << 20)) << 6) | ((field & (1L << 19)) >> 6) | ((field & (1L << 18)) >> 4)
-					|((field & (1L << 17)) >> 2) |  (field & (1L << 16))       | ((field & (1L << 15)) << 2)
-					|((field & (1L << 14)) << 4) | ((field & (1L << 13)) << 6) | ((field & (1L << 12)) >> 6)
-					|((field & (1L << 11)) >> 4) | ((field & (1L << 10)) >> 2) |  (field & (1L <<  9))
-					|((field & (1L <<  8)) << 2) | ((field & (1L <<  7)) << 4) | ((field & (1L <<  6)) << 6)
-					|((field & (1L <<  5)) >> 2) |  (field & (1L <<  4))       | ((field & (1L <<  3)) << 2)
-					|((field & (1L <<  2)) >> 2) |  (field & (1L <<  1))       | ((field & (1L <<  0)) << 2)
-					)
-
-				/**
-				 *  memory structure
-				 *   0123456
-				 * 0   012
-				 * 1   345
-				 * 2 6789abc
-				 * 3 defghij
-				 * 4 klmnopq
-				 * 5   rst
-				 * 6   uvw
-				 *
-				 * output:
-				 *   0123456
-				 * 0   uvw
-				 * 1   rst
-				 * 2 klmnopq
-				 * 3 defghij
-				 * 4 6789abc
-				 * 5   345
-				 * 6   012
-				 * 32 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
-				 *  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  g  h  i  j  k  l  m n o p q r s t u v w
-				 *  u  v  w  r  s  t  k  l  m  n  o  p  q  d  e  f  g  h  i  j  6  7  8 9 a b c 3 4 5 0 1 2
-				 */
-				private def vflip(field: Long): Long = (
-					  (field & (1L << 32 | 1L << 31 | 1L << 30)) >> 30
-					| (field & (1L << 29 | 1L << 28 | 1L << 27)) >> 24
-					| (field & (1L << 26 | 1L << 25 | 1L << 24 | 1L << 23 | 1L << 22 | 1L << 21 | 1L << 20)) >> 14
-					| (field & (1L << 19 | 1L << 18 | 1L << 17 | 1L << 16 | 1L << 15 | 1L << 14 | 1L << 13))
-					| (field & (1L << 12 | 1L << 11 | 1L << 10 | 1L <<  9 | 1L <<  8 | 1L <<  7 | 1L <<  6)) << 14
-					| (field & (1L <<  5 | 1L <<  4 | 1L <<  3)) << 24
-					| (field & (1L <<  2 | 1L <<  1 | 1L <<  0)) << 30
-					)
-
-					// TODO: generate -- priority
-					//  vertical flip
-					//  rotate90
-					//  rotate180
-					//  rotate270
-					//  horizontal flip
-
-			}"""
-		} else {
-			"""result(0) = new com.googlecode.pegsolitaire.BoardHelper {
-					def getNormalform(field: Long) = field
-					def getEquivalentFields(field: Long) = {
-						val r = new com.googlecode.pegsolitaire.LongHashSet
-						r += field
-						r
-					}
-			}"""
-		}
-		interpreter.interpret(cmd)
+		interpreter.interpret(_board_helper_sourcecode)
 		result(0)
 	}
 
@@ -396,7 +322,7 @@ o o o o o o o
 			boardHelper.getEquivalentFields(mask) foreach (v => require(movemask.contains(v)))
 
 			// check if the mask is in the getEquivalentFields list
-			require(boardHelper.getEquivalentFields(mask).toList.contains(mask))
+			require(boardHelper.getEquivalentFields(mask).contains(mask))
 		}
 	}
 
@@ -411,6 +337,36 @@ o o o o o o o
 		}
 
 		hashSet
+	}
+
+	/**
+	 * blocked fields get -1, empty fields get 0, used fields 1
+	 */
+	def toArray(field: Long): Array[Array[Int]] = {
+		var output = lookUpTable map(_.clone())
+
+		for(y <- 0 until output.length;
+		    x <- 0 until output(0).length) {
+			if(output(y)(x) != -1) {
+				if ((field & (1L << output(y)(x))) == 0) {
+					output(y)(x) = 0
+				} else {
+					output(y)(x) = 1
+				}
+			}
+		}
+		output
+	}
+	
+	def toLong(in: Array[Array[Int]]) = {
+		var r = 0L
+		for(y <- 0 until in.length;
+				x <- 0 until in(0).length) {
+				if(in(y)(x) == 1) {
+					r |= 1L << lookUpTable(y)(x)
+				}
+		}
+		r
 	}
 
 	/**
@@ -452,7 +408,7 @@ o o o o o o o
 	final def addPredecessor(field: Long, solutions: LongHashSet) = addRelatedFields(~field, field, solutions)
 
 	/**
-	 * return true if field has a follower in the solutions HashSet
+	 * return true if field has a follower/predecessor in the solutions HashSet
 	 */
 	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
 		var i = 0
@@ -506,6 +462,42 @@ o o o o o o o
 			boardHelper.getNormalform(field ^ mask)
 		else
 			Long.MinValue
+	}
+	
+	private def print_look_up_table(in: Array[Array[Int]]) {
+		val r = new StringBuilder
+		print_look_up_table(in, r)
+		println(r.result())
+	}
+
+	private def print_look_up_table(in: Array[Array[Int]], r: StringBuilder) {
+		in foreach { n =>
+			n foreach { i =>
+				if(i != -1)
+					r append  ("%2d ".format(i))
+				else
+				 r append ("   ")
+			}
+			r append "\n"
+		}
+		r append "\n"
+	}
+
+	def debug_output: String = {
+		val r = new StringBuilder
+		
+		r append "Look up table\n"
+		print_look_up_table(lookUpTable, r)
+
+		movemask_transformation_tests foreach (print_look_up_table(_, r))
+
+		// output movemask
+		// output checkmask1
+		// output checkmask2
+		r append "board_helper sourcecode\n"
+		r append board_helper_sourcecode
+		
+		r.result()
 	}
 
 }
