@@ -237,10 +237,10 @@ object TUI {
 			Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
 		} else if(!arg_load.isEmpty) {
 			try {
-				Time("Load")(solitaire = Solver.fromFile(arg_load, observer))
+				Time("Load")(solitaire = IO.load(arg_load, observer))
 			} catch {
-				case _ =>
-					printlnError("error: couldn't load solution, abort")
+				case e =>
+					printlnError("error: couldn't load solution, abort (" + e.getMessage() + ")")
 					return
 			}
 		} else {
@@ -276,7 +276,7 @@ object TUI {
 		printFields(solitaire.game, solitaire.getEnd.toList)
 
 		if(!arg_save.isEmpty)
-			solitaire.save(arg_save)
+			IO.save(arg_save, solitaire)
 
 		if(arg_browse)
 			solutionBrowser(solitaire)
