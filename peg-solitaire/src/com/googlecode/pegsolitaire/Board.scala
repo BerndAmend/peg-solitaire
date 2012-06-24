@@ -432,7 +432,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		val size = movemask_size
 		while (i < size) {
 			val n = applyMove(checkfield, field, i)
-			if (n != Long.MinValue && result.contains(n))
+			if (n != Long.MinValue && searchSet.contains(n))
 				result += n
 			i += 1
 		}
