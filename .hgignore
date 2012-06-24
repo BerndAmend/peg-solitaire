@@ -2,6 +2,6 @@ syntax: glob
 *.class
 *.jar
 *~
-.idea*
-target
 bib/*
+.metadata
+.cache
