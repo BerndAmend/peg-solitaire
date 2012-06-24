@@ -48,6 +48,9 @@ class ConsolenStatusObserver extends StatusObserver {
 /**
  * TODO:
  *  rewrite argument parser
+ *  add functionality to allow the user to define how many destination pegs should stay on the board
+ •  add functionality to allow the user to define a start field
+ •  allow the user to search a solution for a given field
  */
 object TUI {
 
@@ -65,7 +68,7 @@ object TUI {
 					"                         english: standard english\n" +
 					"                         15holes: simple test board\n" +
 					"                         euro: standard european\n" +
-					"  -load <filename>     load a saved field from a file (gz compressed)\n" +
+					"  -load <filename>     load a saved field from a file (can't load files created with peg-solitaire version <0.4)\n" +
 					"  -full                calculate all solutions for all possible start fields\n" +
 					"  -select              limit startfields to a user defined selection\n" +
 					"  -save <filename>     since calculating all solutions for complicated fields\n" +

@@ -316,6 +316,21 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		Depth((averageValue / size).toDouble, maxValue, oneAccessElements.toDouble / size.toDouble)
 	}
 
+	/*def bitDistribution: Array[Double] = {
+		val iter = iterator
+		val result = Array.fill[BigDecimal](64)(BigDecimal(0))
+
+		while (iter.hasNext) {
+			val elem = iter.unsafe_next
+			if (game.hasFollower(elem, current)) {
+				result += elem
+			} else {
+				deadEndFields += 1L
+			}
+			
+			result.map[DOuble]()
+	}*/
+
 }
 
 
