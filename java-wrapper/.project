@@ -3,6 +3,7 @@
 	<name>java-wrapper</name>
 	<comment></comment>
 	<projects>
+		<project>peg-solitaire</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
