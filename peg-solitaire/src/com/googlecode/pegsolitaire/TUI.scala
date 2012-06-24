@@ -61,21 +61,19 @@ object TUI {
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
 		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
 
-		if(args.length == 0) {
-			println("usage [user|english|15holes|euro] [-full] [-count] [additional options]\n" +
-					"  Available Boards:\n" +
-					"    user: create your own board!\n" +
-					"    english: standard english (default)\n" +
-					"    15holes: simple test board\n" +
-					"    euro: standard european\n\n" +
-					"  -full                calculate all solutions for all possible start fields,\n" +
-					"                        by default you have to select the startfield\n" +
-					"  -count               count the number of ways to a solution (this may take a while)\n" +
-					"  -color               enable colored text output\n" +
-					"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
-					"  -debug               enable debug output\n\n" +
-					"  To reduce memory usage try \"-thread-count 1\"")
-		}
+		println("usage [user|english|15holes|euro] [-full] [-count] [additional options]\n" +
+				"  Available Boards:\n" +
+				"    user: create your own board!\n" +
+				"    english: standard english (default)\n" +
+				"    15holes: simple test board\n" +
+				"    euro: standard european\n\n" +
+				"  -full                calculate all solutions for all possible start fields,\n" +
+				"                        by default you have to select the startfield\n" +
+				"  -count               count the number of ways to a solution (this may take a while)\n" +
+				"  -color               enable colored text output\n" +
+				"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
+				"  -debug               enable debug output\n\n" +
+				"  To reduce memory usage try \"-thread-count 1\"")
 
 		val observer = new ConsolenStatusObserver
 
