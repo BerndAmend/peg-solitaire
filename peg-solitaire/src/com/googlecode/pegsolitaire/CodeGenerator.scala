@@ -25,7 +25,7 @@ object CodeGenerator {
 		result append "(\n   "
 		
 		for (i <- (field.length-1).to(0,-1)) {
-			result append "((field & ( 1L << "
+			result append "((f & ( 1L << "
 			result append "%2d".format(i)
 			result append "))"
 

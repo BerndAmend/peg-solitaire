@@ -55,31 +55,26 @@ class ConsolenStatusObserver extends StatusObserver {
 object TUI {
 
 	def main(args: Array[String]) {
-		println("Peg Solitaire 0.4dev\n" +
+		println("Peg Solitaire 0.4\n" +
 				"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 		        "  This program is free software: you can redistribute it and/or modify\n" +
 		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
 		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
 
 		if(args.length == 0) {
-			println("usage [[-board user|english|15holes|euro]|[-load <filename>] [-select|-full] [-save <filename>] [-browser] [-count] [additional options]\n" +
-					"  -board <selection>   select a solitaire board\n" +
-					"                         user: create your own board!\n" +
-					"                         english: standard english\n" +
-					"                         15holes: simple test board\n" +
-					"                         euro: standard european\n" +
-					"  -load <filename>     load a saved field from a file (can't load files created with peg-solitaire version <0.4)\n" +
-					"  -full                calculate all solutions for all possible start fields\n" +
-					"  -select              limit startfields to a user defined selection\n" +
-					"  -save <filename>     since calculating all solutions for complicated fields\n" +
-					"                       takes a while, the results can be saved (gz compressed)\n" +
-					"  -browser             interactive text based interface to explore all possible solutions\n" +
+			println("usage [user|english|15holes|euro] [-full] [-count] [additional options]\n" +
+					"  Available Boards:\n" +
+					"    user: create your own board!\n" +
+					"    english: standard english (default)\n" +
+					"    15holes: simple test board\n" +
+					"    euro: standard european\n\n" +
+					"  -full                calculate all solutions for all possible start fields,\n" +
+					"                        by default you have to select the startfield\n" +
 					"  -count               count the number of ways to a solution (this may take a while)\n" +
 					"  -color               enable colored text output\n" +
 					"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
 					"  -debug               enable debug output\n\n" +
 					"  To reduce memory usage try \"-thread-count 1\"")
-			sys.exit(1)
 		}
 
 		val observer = new ConsolenStatusObserver
@@ -87,15 +82,9 @@ object TUI {
 		/*
 		 * parse command line arguments
 		 */
-		var arg_select = false
 		var arg_full = false
-		var arg_load = ""
 		var arg_count = false
 
-		var arg_save = ""
-		var arg_browse = false
-
-		var arg_board = false
 		var selectedGame = Boards.English
 		var thread_count = 0
 
@@ -111,25 +100,9 @@ object TUI {
 			}
 
 			args(i) match {
-				case "-select" => arg_select = true
 				case "-full" => arg_full = true
-				case "-load" =>
-					i += checkForArguments("-load")
-					arg_load = args(i)
 				case "-count" => arg_count = true
-				case "-save" =>
-					i += checkForArguments("-save")
-					arg_save = args(i)
-				case "-browser" => arg_browse = true
 				case "-board" =>
-					i += checkForArguments("-board")
-					try {
-						selectedGame = Boards.withName(args(i))
-					} catch {
-						case _ => printlnError("error: unknown board type, exit")
-											return
-					}
-					arg_board = true
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
 				case "-thread-count" =>
@@ -144,112 +117,78 @@ object TUI {
 						case _ => printlnError("error: invalid argument for -thread-count, exit")
 											return
 					}
-				case s => printlnError("error: unknown parameter " + s + " exit")
-						return
+				case s =>
+				  		try {
+							selectedGame = Boards.withName(args(i))
+						} catch {
+							case _ => printlnError("error: unknown parameter " + s + " exit")
+							return
+						}
 			}
 			i += 1
 		}
-
-		if(!arg_board && arg_load.isEmpty) {
-			printlnError("error: either -load or -board has to be specified")
-			return
-		}
-
-		if(arg_board && !arg_load.isEmpty) {
-			printlnError("error: -load and -board are mutually exclusive")
-			return
-		}
-
-		if(arg_full && arg_select) {
-			printlnError("error: -select and -full are mutually exclusive")
-			return
-		}
-
-		if(arg_board && !arg_full && !arg_select) {
-			printlnError("error: either -select or -full has to be selected")
-			return
-		}
-
-		if(arg_save.isEmpty && !arg_browse) {
-			printlnError("error: either -save or -browser has to be selected")
-			return
-		}
-
 		thread_count = if(thread_count==0) Runtime.getRuntime.availableProcessors else thread_count
 		
 		println("Use " + thread_count + " threads")
 
 		var solitaire: Solver = null
-
-		if(arg_board) {
-			val solitaireType = selectedGame match {
-				case Boards.English => Boards.EnglishBoard
-				case Boards.European => Boards.EuropeanBoard
-				case Boards.Holes15 => Boards.Holes15Board
-				case Boards.User =>
-					println("Examples:")
-					println("15 holes board:\n\no . . . .\no o . . .\no o o . .\no o o o .\no o o o o\n")
-					println("Simple board:\n\n. o o o o .\no o o o o o\no o . . o o\no o . . o o\no o o o o o\n. o o o o .\n")
-					println("Check board (all move directions have to be allowed):\n\n. . . . . . . o o\n. . . . . . o o o\no o . . . o o o .\no o o . o o o . .\n. o o o o o . . .\n. . o o o . . . .\n. . . o . . . . .\n")
-					println("Please create a board or copy one from above (max 63 holes).\nPress enter 2x to process your input (o = hole, . = blocked):\n")
-					val sb = new StringBuilder
-					var current = ""
-					var done = false
-					do {
-						current = Console.readLine
-						done = current.isEmpty
-						if(!done) {
-							sb append current
-							sb append '\n'
-						}
-					} while(!done)
-					var moveDirection = List[MoveDirections.Value]()
-					MoveDirections.values.foreach {
-						m =>
-						if(readYesOrNo("Are " + m + " moves allowed? (y/n)"))
-						moveDirection ::= m
+	
+		val solitaireType = selectedGame match {
+			case Boards.English => Boards.EnglishBoard
+			case Boards.European => Boards.EuropeanBoard
+			case Boards.Holes15 => Boards.Holes15Board
+			case Boards.User =>
+				println("Examples:")
+				println("15 holes board:\n\no . . . .\no o . . .\no o o . .\no o o o .\no o o o o\n")
+				println("Simple board:\n\n. o o o o .\no o o o o o\no o . . o o\no o . . o o\no o o o o o\n. o o o o .\n")
+				println("Check board (all move directions have to be allowed):\n\n. . . . . . . o o\n. . . . . . o o o\no o . . . o o o .\no o o . o o o . .\n. o o o o o . . .\n. . o o o . . . .\n. . . o . . . . .\n")
+				println("Please create a board or copy one from above (max 63 holes).\nPress enter 2x to process your input (o = hole, . = blocked):\n")
+				val sb = new StringBuilder
+				var current = ""
+				var done = false
+				do {
+					current = Console.readLine
+					done = current.isEmpty
+					if(!done) {
+						sb append current
+						sb append '\n'
 					}
+				} while(!done)
+				var moveDirection = List[MoveDirections.Value]()
+				MoveDirections.values.foreach {
+					m =>
+					if(readYesOrNo("Are " + m + " moves allowed? (y/n)"))
+					moveDirection ::= m
+				}
 
-					if(moveDirection.isEmpty) {
-						printlnError("error: no move directions selected, exit")
-						return
-					}
-
-					var sol: Board = null
-					try {
-						sol = new Board(sb.toString, moveDirection.toArray[MoveDirections.Value])
-					} catch {
-						case _ => printlnError("error: the entered field is invalid, exit")
-						return
-					}
-				println("Press enter to start solving. This may take a while.")
-				readLine
-				sol
-			}
-			
-			if(Helper.enableDebug) {
-				println(solitaireType.debug_output)
-			}
-			
-			val selection: Iterable[Long] = if(arg_select) {
-				println("Select one or more start fields:")
-				selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
-			} else {
-				solitaireType.possibleStartFields.toList
-			}
-			Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
-		} else if(!arg_load.isEmpty) {
-			try {
-				Time("Load")(solitaire = IO.load(arg_load, observer))
-			} catch {
-				case e =>
-					printlnError("error: couldn't load solution, abort (" + e.getMessage() + ")")
+				if(moveDirection.isEmpty) {
+					printlnError("error: no move directions selected, exit")
 					return
-			}
-		} else {
-			printlnError("error: neither -board nor -load is specified, abort")
-			return
+				}
+
+				var sol: Board = null
+				try {
+					sol = new Board(sb.toString, moveDirection.toArray[MoveDirections.Value])
+				} catch {
+					case _ => printlnError("error: the entered field is invalid, exit")
+					return
+				}
+			println("Press enter to start solving. This may take a while.")
+			readLine
+			sol
 		}
+		
+		if(Helper.enableDebug) {
+			println(solitaireType.debug_output)
+		}
+		
+		val selection: Iterable[Long] = if(arg_full) {
+			solitaireType.possibleStartFields.toList
+		} else {
+			println("Select one or more start fields:")
+			selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
+		}
+		Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
 
 		try {
 			solitaire.getStart
@@ -278,11 +217,7 @@ object TUI {
 		println("Possible solutions:")
 		printFields(solitaire.game, solitaire.getEnd.toList)
 
-		if(!arg_save.isEmpty)
-			IO.save(arg_save, solitaire)
-
-		if(arg_browse)
-			solutionBrowser(solitaire)
+		solutionBrowser(solitaire)
 
 		println("Bye, bye")
 	}

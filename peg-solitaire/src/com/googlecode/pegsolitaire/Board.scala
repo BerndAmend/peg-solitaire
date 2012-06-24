@@ -216,12 +216,12 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		val get_normalform = new StringBuilder
 		val get_equivalent_fields = new StringBuilder
 
-		get_normalform append "def getNormalform(field: Long): Long = {\n"
-		get_normalform append "var n = field\n\n"
+		get_normalform append "def getNormalform(f: Long): Long = {\n"
+		get_normalform append "var n = f\n\n"
 
-		get_equivalent_fields append "def getEquivalentFields(field: Long) = {\n"
+		get_equivalent_fields append "def getEquivalentFields(f: Long) = {\n"
 		get_equivalent_fields append "val n = new com.googlecode.pegsolitaire.LongHashSet(8)\n"
-		get_equivalent_fields append "n += field\n\n"
+		get_equivalent_fields append "n += f\n\n"
 
 		if(is_transformation_valid(rotate180)) {
 			val c_rotate180 = CodeGenerator(rotate180(lookUpTable))
@@ -300,11 +300,8 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 	private val interpreter = {
 		val settings = new scala.tools.nsc.Settings
-		if(System.getProperty("peg-solitaire.usejavacp") == "false") {
-			settings.embeddedDefaults[BoardHelper]
-		} else {
-			settings.usejavacp.value = true // required for assembly releases, but result in a crash of sbt
-		}
+		//	settings.embeddedDefaults[BoardHelper]
+		settings.usejavacp.value = true
 		new scala.tools.nsc.interpreter.IMain(settings)
 	}
 
