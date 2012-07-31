@@ -45,12 +45,8 @@ final object LongHashSet {
  * A memory-efficient hash set optimized for Longs
  * based on the java HashSet implementation by Google Inc.
  */
-final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), s: Int=0) { // extends scala.collection.Iterable[Long] {
+final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.Iterable[Long] {
 
-	/**
-	 * Number of objects in this set; transient due to custom serialization.
-	 * Default access to avoid synthetic accessors from inner classes.
-	 */
 	protected var _size = s
 
 	/**
@@ -61,10 +57,10 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	/**
 	 * current fill state in percent
 	 */
-	def used = _size.toDouble / table.length.toDouble
+	def used = if(table == null) 1.0 else (_size.toDouble / table.length.toDouble)
 
 	private var table = t
-	private var table_length_minus_1 = (t.length - 1)
+	private var table_length_minus_1 = if(t == null) 0 else (t.length - 1)
 
   /**
    * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
@@ -105,9 +101,13 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 			}
 		}
 	}
+	
+	def this() {
+	   this(LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), 0)
+	}
 
 	def this(expectedSize: Int) {
-		this ()
+		this (null, 0)
 		require(expectedSize >= 0)
 		ensureSizeFor(expectedSize)
 	}
@@ -199,11 +199,11 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 	 * Ensures the set is large enough to contain the specified number of entries.
 	 */
 	private final def ensureSizeFor(expectedSize: Int) {
-		if(table.length * 3 >= expectedSize * 4)
+		if(table != null && table.length * 3 >= expectedSize * 4)
 			return
 
 		// calculate table size
-		var newCapacity = table.length
+		var newCapacity = if (table==null) 1 else table.length
 		while (newCapacity * 3 < expectedSize * 4)
 			newCapacity <<= 1
 
@@ -212,7 +212,8 @@ final class LongHashSet(t: Array[Long] = LongHashSet.allocateTableMemory(LongHas
 		table = LongHashSet.allocateTableMemory(newCapacity)
 		table_length_minus_1 = table.length - 1
 		_size = 0
-		internal_addAll(old_table)
+		if(old_size != 0)
+			internal_addAll(old_table)
 		require(_size == old_size)
 	}
 
