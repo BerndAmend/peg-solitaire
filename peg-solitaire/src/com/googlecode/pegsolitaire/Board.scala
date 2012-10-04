@@ -302,6 +302,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		val settings = new scala.tools.nsc.Settings
 		settings.embeddedDefaults[BoardHelper]
 		settings.usejavacp.value = true
+		settings.optimise.value = true
 		new scala.tools.nsc.interpreter.IMain(settings)
 	}
 
