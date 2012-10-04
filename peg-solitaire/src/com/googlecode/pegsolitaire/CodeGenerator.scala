@@ -20,36 +20,51 @@ object CodeGenerator {
 
 	def apply(in: Array[Array[Int]]): String = {
 		val field: Array[Int] = (in.flatten.filter( _ != -1))
+
+		// calculate operations
+		val output = new scala.collection.mutable.HashMap[Int, Long]
+
+		for (i <- (field.length-1).to(0,-1)) {
+			val mask = 1L << i
+
+			val e = field(field.length-1-i)
+			val diff = e - i
+
+			if(output contains diff) {
+			  output(diff) |= mask
+			} else {
+			  output(diff) = mask
+			}
+		}
+
+		// generate code
 		val result = new StringBuilder
 
 		result append "(\n   "
-		
-		for (i <- (field.length-1).to(0,-1)) {
-			result append "((f & ( 1L << "
-			result append "%2d".format(i)
-			result append "))"
+		var pos = 0
+		for(i <- output) {
+			result append "((f & "
+			result append i._2
+			result append "L)"
 
-			val e = field(field.length-1-i)
-			if (e-i != 0) {
-				if(i < e) {
-					result append " << "
-					result append "%2d".format(math.abs(e - i))
-				} else {
-					result append " >> "
-					result append "%2d".format(math.abs(e - i))
-				}
-			} else {
-				result append "      "
+			if (i._1 > 0) {
+				result append " << "
+				result append math.abs(i._1)
+			} else if (i._1 < 0) {
+				result append " >> "
+				result append math.abs(i._1)
 			}
 			result append ")"
-			
-			if((field.length-1-i)%3 == 2)
+
+			if(pos%4 == 3)
 				result append "\n"
-			
-			if(i != 0)
+
+			if(pos != output.size-1)
 				result append " | "
+
+			pos += 1
 		}
-		
+
 		result append ")"
 
 		result.result()
