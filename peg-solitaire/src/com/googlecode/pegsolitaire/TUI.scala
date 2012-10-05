@@ -31,7 +31,7 @@ class ConsolenStatusObserver extends StatusObserver {
 	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
 		printColoredText(", found " + solution.size + " fields", Color.green)
 		if(Helper.enableDebug)
-			printlnlnDebug(" " + solution.depth)
+			printlnlnDebug(" " + solution.depth + " " + solution.bitDistributionString)
 		else
 			println()
 	}

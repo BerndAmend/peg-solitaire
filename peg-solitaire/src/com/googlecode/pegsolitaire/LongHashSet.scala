@@ -317,20 +317,42 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		Depth((averageValue / size).toDouble, maxValue, oneAccessElements.toDouble / size.toDouble)
 	}
 
-	/*def bitDistribution: Array[Double] = {
+	def bitDistribution: Array[Long] = {
 		val iter = iterator
-		val result = Array.fill[BigDecimal](64)(BigDecimal(0))
+		val result = Array.fill[Long](64)(0L)
 
 		while (iter.hasNext) {
 			val elem = iter.unsafe_next
-			if (game.hasFollower(elem, current)) {
-				result += elem
-			} else {
-				deadEndFields += 1L
-			}
 			
-			result.map[DOuble]()
-	}*/
+			var i = 0
+			while(i<64) {
+			  if((elem & (1L << i)) != 0)
+			    result(i) += 1
+			  i += 1
+			}
+		}
+
+		result
+	}
+
+	def bitDistributionString: String = {
+		val bd = bitDistribution
+		val max = bd.max.asInstanceOf[Double]
+
+		val r = new StringBuilder
+		r append "bd:"
+
+		for(i <- 0 until bd.length) {
+			if(bd(i) != 0 ) {
+				r append " "
+				r append i
+				r append ":"
+				r append "%3f".format(bd(i).asInstanceOf[Double]/max)
+			}
+		}
+
+		r.result
+	}
 
 }
 
