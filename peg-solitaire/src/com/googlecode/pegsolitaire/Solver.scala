@@ -236,8 +236,8 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		count
 	}
 
-	private def calculateForward(sol: Int): Unit = calculateNextStep(sol, -1, true) //game.addFollower)
-	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol, 1, false) //game.addPredecessor)
+	private def calculateForward(sol: Int): Unit = calculateNextStep(sol, -1, true)
+	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol, 1, false)
 
 	private def calculateNextStep(sol: Int, next: Int, follower: Boolean) {
 		val results = (0 until thread_count).map {
