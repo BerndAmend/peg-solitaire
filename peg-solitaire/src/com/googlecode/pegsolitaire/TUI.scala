@@ -30,7 +30,7 @@ class ConsolenStatusObserver extends StatusObserver {
 	def begin_forward_calculation_step(removed_pegs: Int) = printColoredText("search fields with " + removed_pegs + " removed pegs", Color.green)
 	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
 		printColoredText(", found " + solution.size + " fields", Color.green)
-		if(Helper.enableDebug)
+		if (Helper.enableDebug)
 			printlnlnDebug(" " + solution.depth + " " + solution.bitDistributionString)
 		else
 			println()
@@ -49,31 +49,31 @@ class ConsolenStatusObserver extends StatusObserver {
  * TODO:
  *  rewrite argument parser
  *  add functionality to allow the user to define how many destination pegs should stay on the board
- •  add functionality to allow the user to define a start field
- •  allow the user to search a solution for a given field
+ *  add functionality to allow the user to define a start field
+ *  allow the user to search a solution for a given field
  */
 object TUI {
 
 	def main(args: Array[String]) {
 		println("Peg Solitaire 0.4\n" +
-				"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
-		        "  This program is free software: you can redistribute it and/or modify\n" +
-		        "  it under the terms of the GNU General Public License version 3 as published by\n" +
-		        "  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
+			"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
+			"  This program is free software: you can redistribute it and/or modify\n" +
+			"  it under the terms of the GNU General Public License version 3 as published by\n" +
+			"  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")
 
 		println("usage [user|english|15holes|euro] [-full] [-count] [additional options]\n" +
-				"  Available Boards:\n" +
-				"    user: create your own board!\n" +
-				"    english: standard english (default)\n" +
-				"    15holes: simple test board\n" +
-				"    euro: standard european\n\n" +
-				"  -full                calculate all solutions for all possible start fields,\n" +
-				"                        by default you have to select the startfield\n" +
-				"  -count               count the number of ways to a solution (this may take a while)\n" +
-				"  -color               enable colored text output\n" +
-				"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
-				"  -debug               enable debug output\n\n" +
-				"  To reduce memory usage try \"-thread-count 1\"")
+			"  Available Boards:\n" +
+			"    user: create your own board!\n" +
+			"    english: standard english (default)\n" +
+			"    15holes: simple test board\n" +
+			"    euro: standard european\n\n" +
+			"  -full                calculate all solutions for all possible start fields,\n" +
+			"                        by default you have to select the startfield\n" +
+			"  -count               count the number of ways to a solution (this may take a while)\n" +
+			"  -color               enable colored text output\n" +
+			"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
+			"  -debug               enable debug output\n\n" +
+			"  To reduce memory usage try \"-thread-count 1\"")
 
 		val observer = new ConsolenStatusObserver
 
@@ -86,11 +86,11 @@ object TUI {
 		var selectedGame = Boards.English
 		var thread_count = 0
 
-		var i=0
-		while(i<args.length) {
+		var i = 0
+		while (i < args.length) {
 			/// exit program if argument count is insufficient
-			def checkForArguments(name: String, num: Int=1): Int = {
-				if(i+num == args.length) {
+			def checkForArguments(name: String, num: Int = 1): Int = {
+				if (i + num == args.length) {
 					printlnError("error: " + name + " requires an additional parameter")
 					sys.exit(-1)
 				}
@@ -107,30 +107,32 @@ object TUI {
 					i += checkForArguments("-thread-count")
 					try {
 						thread_count = args(i).toInt
-						if(thread_count < 0) {
+						if (thread_count < 0) {
 							printlnError("error: negative arguments for -thread-count are not allowed, exit")
 							return
 						}
 					} catch {
-						case _ => printlnError("error: invalid argument for -thread-count, exit")
-											return
+						case _ =>
+							printlnError("error: invalid argument for -thread-count, exit")
+							return
 					}
 				case s =>
-				  		try {
-							selectedGame = Boards.withName(args(i))
-						} catch {
-							case _ => printlnError("error: unknown parameter " + s + " exit")
+					try {
+						selectedGame = Boards.withName(args(i))
+					} catch {
+						case _ =>
+							printlnError("error: unknown parameter " + s + " exit")
 							return
-						}
+					}
 			}
 			i += 1
 		}
-		thread_count = if(thread_count==0) Runtime.getRuntime.availableProcessors else thread_count
-		
+		thread_count = if (thread_count == 0) Runtime.getRuntime.availableProcessors else thread_count
+
 		println("Use " + thread_count + " threads")
 
 		var solitaire: Solver = null
-	
+
 		val solitaireType = selectedGame match {
 			case Boards.English => Boards.EnglishBoard
 			case Boards.European => Boards.EuropeanBoard
@@ -147,19 +149,19 @@ object TUI {
 				do {
 					current = Console.readLine
 					done = current.isEmpty
-					if(!done) {
+					if (!done) {
 						sb append current
 						sb append '\n'
 					}
-				} while(!done)
+				} while (!done)
 				var moveDirection = List[MoveDirections.Value]()
 				MoveDirections.values.foreach {
 					m =>
-					if(readYesOrNo("Are " + m + " moves allowed? (y/n)"))
-					moveDirection ::= m
+						if (readYesOrNo("Are " + m + " moves allowed? (y/n)"))
+							moveDirection ::= m
 				}
 
-				if(moveDirection.isEmpty) {
+				if (moveDirection.isEmpty) {
 					printlnError("error: no move directions selected, exit")
 					return
 				}
@@ -168,19 +170,20 @@ object TUI {
 				try {
 					sol = new Board(sb.toString, moveDirection.toArray[MoveDirections.Value])
 				} catch {
-					case _ => printlnError("error: the entered field is invalid, exit")
-					return
+					case _ =>
+						printlnError("error: the entered field is invalid, exit")
+						return
 				}
-			println("Press enter to start solving. This may take a while.")
-			readLine
-			sol
+				println("Press enter to start solving. This may take a while.")
+				readLine
+				sol
 		}
-		
-		if(Helper.enableDebug) {
+
+		if (Helper.enableDebug) {
 			println(solitaireType.debug_output)
 		}
-		
-		val selection: Iterable[Long] = if(arg_full) {
+
+		val selection: Iterable[Long] = if (arg_full) {
 			solitaireType.possibleStartFields.toList
 		} else {
 			println("Select one or more start fields:")
@@ -191,14 +194,15 @@ object TUI {
 		try {
 			solitaire.getStart
 		} catch {
-			case _ => printlnError("error: there is no solution, sorry")
-			return
+			case _ =>
+				printlnError("error: there is no solution, sorry")
+				return
 		}
 
 		println("\nPossible fields:")
 		var count = 0
 		for (i <- 0 until solitaire.game.length) {
-			if(solitaire.solution(i) != null) {
+			if (solitaire.solution(i) != null) {
 				val num = solitaire.solution(i).size
 				println("  - removed pegs = " + i + "  possible fields = " + num)
 				count += num
@@ -207,7 +211,7 @@ object TUI {
 		}
 		printlnColoredText("There are " + count + " possible fields.", Color.blue)
 
-		if(arg_count) {
+		if (arg_count) {
 			println("\nCount how many ways are available to solve the board (this may take a while)")
 			printlnColoredText("There are " + solitaire.countPossibleGames + " ways to a solution.", Color.blue)
 		}
@@ -220,19 +224,19 @@ object TUI {
 		println("Bye, bye")
 	}
 
-	def printFields(game: Board, choices: List[Long])  {
+	def printFields(game: Board, choices: List[Long]) {
 		val sb = new StringBuilder
 		var tmp = ""
 		for (i <- 0 until choices.length) {
-			tmp = Helper.mixStrings(tmp, game.toString(choices(i)), seperator="     ", str2label=i.toString)
+			tmp = Helper.mixStrings(tmp, game.toString(choices(i)), seperator = "     ", str2label = i.toString)
 
-			if((i+1)%4 == 0) {
+			if ((i + 1) % 4 == 0) {
 				sb append tmp + "\n"
 				tmp = ""
 			}
 		}
 
-		if(!tmp.isEmpty)
+		if (!tmp.isEmpty)
 			sb append tmp + "\n"
 
 		println(sb.toString)
@@ -251,7 +255,7 @@ object TUI {
 			print("(x to abort) > ")
 			Console.flush
 			val input = readLine()
-			if(input.toLowerCase=="x") {
+			if (input.toLowerCase == "x") {
 				println("Bye, bye")
 				sys.exit(0)
 			}
@@ -285,8 +289,8 @@ object TUI {
 
 			val splitted = input.split(' ')
 
-			for(e <- splitted) {
-				if(e.toLowerCase == "x") {
+			for (e <- splitted) {
+				if (e.toLowerCase == "x") {
 					println("Bye, bye")
 					sys.exit(0)
 				}
@@ -302,9 +306,9 @@ object TUI {
 				}
 			}
 
-			if(selected.isEmpty)
+			if (selected.isEmpty)
 				println("Nothing selected, try again")
-		} while(selected.isEmpty)
+		} while (selected.isEmpty)
 		selected
 	}
 
