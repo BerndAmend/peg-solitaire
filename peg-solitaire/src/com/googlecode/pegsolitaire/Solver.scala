@@ -110,7 +110,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			if(bc <= 0)
 				throw new Exception("Invalid number of bits set (" + e.toString + ")")
 
-			solution(bc) add e
+			solution(bc) += e
 		}
 
 

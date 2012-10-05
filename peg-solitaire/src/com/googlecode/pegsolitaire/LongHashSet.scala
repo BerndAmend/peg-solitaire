@@ -57,19 +57,19 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	/**
 	 * current fill state in percent
 	 */
-	def used = if(table == null) 1.0 else (_size.toDouble / table.length.toDouble)
+	def used = if (table == null) 1.0 else (_size.toDouble / table.length.toDouble)
 
 	private var table = t
-	private var table_length_minus_1 = if(t == null) 0 else (t.length - 1)
+	private var table_length_minus_1 = if (t == null) 0 else (t.length - 1)
 
-  /**
-   * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
-   * e.g. to read multiple elements from a HashSet at a time without synchronization
-   */
-	final class HashSetIterator(val groupID: Int=0, val groupSize: Int=1) { //extends scala.collection.Iterator[Long] {
-    require(groupID >= 0)
-    require(groupSize > 0)
-    require(groupID < groupSize)
+	/**
+	 * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
+	 * e.g. to read multiple elements from a HashSet at a time without synchronization
+	 */
+	final class HashSetIterator(val groupID: Int = 0, val groupSize: Int = 1) {
+		require(groupID >= 0)
+		require(groupSize > 0)
+		require(groupID < groupSize)
 
 		private var _index = groupID
 		private val table_length = table.length
@@ -101,44 +101,23 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 			}
 		}
 	}
-	
-	def this() {
-	   this(LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), 0)
-	}
+
+	def this() = this(LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), 0)
 
 	def this(expectedSize: Int) {
-		this (null, 0)
+		this(null, 0)
 		require(expectedSize >= 0)
 		ensureSizeFor(expectedSize)
 	}
 
-	/**
-	 * add all elements from an Iterable[Long] to the set
-	 */
-	def this(c: Iterable[Long]) {
-		this ()
-		addAll(c)
-	}
-
 	def this(c: LongHashSet) {
-			this (c.size)
-			addAll(c)
-		}
+		this(c.size)
+		this += c
+	}
 
 	final def isEmpty = _size == 0
 
-	final def +=(e: Long) = add(e)
-
-	final def +=(c: Iterable[Long]) = addAll(c)
-
-	final def +=(c: LongHashSet) = addAll(c)
-
-	final def addAll(c: Iterable[Long]) {
-		for (e <- c)
-			add(e)
-	}
-
-	final def addAll(c: LongHashSet) {
+	final def +=(c: LongHashSet) {
 		ensureSizeFor(_size + c.size)
 		internal_addAll(c.table)
 	}
@@ -148,13 +127,13 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	 * having to synthesize a collection in    { @link Sets }.
 	 * ignores INVALID_ELEMENT entries in the Array
 	 */
-	final def addAll(elements: Array[Long]) {
+	final def +=(elements: Array[Long]) {
 		ensureSizeFor(_size + elements.length)
 		internal_addAll(elements)
 	}
 
-	final def add(e: Long) {
-		require( e != LongHashSet.INVALID_ELEMENT)
+	final def +=(e: Long) {
+		require(e != LongHashSet.INVALID_ELEMENT)
 		ensureSizeFor(size + 1)
 		internal_add(e)
 	}
@@ -163,8 +142,8 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	private final def internal_addAll(elements: Array[Long]) {
 		val length = elements.length
 		var i = 0
-		while(i<length) {
-			if(elements(i) != LongHashSet.INVALID_ELEMENT)
+		while (i < length) {
+			if (elements(i) != LongHashSet.INVALID_ELEMENT)
 				internal_add(elements(i))
 			i += 1
 		}
@@ -193,17 +172,17 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	final def contains(o: Long) = table(findOrEmpty(o)) != LongHashSet.INVALID_ELEMENT
 
 	final def iterator = new HashSetIterator
-  final def iterator(groupID: Int, groupSize: Int) = new HashSetIterator(groupID, groupSize)
+	final def iterator(groupID: Int, groupSize: Int) = new HashSetIterator(groupID, groupSize)
 
 	/**
 	 * Ensures the set is large enough to contain the specified number of entries.
 	 */
 	private final def ensureSizeFor(expectedSize: Int) {
-		if(table != null && table.length * 3 >= expectedSize * 4)
+		if (table != null && table.length * 3 >= expectedSize * 4)
 			return
 
 		// calculate table size
-		var newCapacity = if (table==null) 1 else table.length
+		var newCapacity = if (table == null) 1 else table.length
 		while (newCapacity * 3 < expectedSize * 4)
 			newCapacity <<= 1
 
@@ -212,7 +191,7 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		table = LongHashSet.allocateTableMemory(newCapacity)
 		table_length_minus_1 = table.length - 1
 		_size = 0
-		if(old_size != 0)
+		if (old_size != 0)
 			internal_addAll(old_table)
 		require(_size == old_size)
 	}
@@ -223,7 +202,7 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	 */
 	private final def find(o: Long): Int = {
 		val index = findOrEmpty(o)
-		if(table(index) == LongHashSet.INVALID_ELEMENT)
+		if (table(index) == LongHashSet.INVALID_ELEMENT)
 			-1
 		else
 			index
@@ -236,19 +215,16 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	 * @return index
 	 */
 	private final def findOrEmpty(o: Long): Int = {
-		var index = getIndex(o)
-		while (true) { // if this loop becomes an infinite loop, there is no free element in the table (this should never happen)
-			var existing = table(index)
+		@scala.annotation.tailrec
+		def loop(index: Int): Int = {
+			val existing = table(index)
 			if (existing == LongHashSet.INVALID_ELEMENT || o == existing)
-				return index
-
-			index += 1
-			if (index == table.length)
-				index = 0
+				index
+			else
+				loop((index+1) % table.length)
 		}
 
-		// this should not happen since the table should never be filled so much
-		throw new Exception("Something went terrible wrong")
+		loop(getIndex(o))
 	}
 
 	private final def getIndex(value: Long): Int = {
@@ -269,7 +245,7 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 			func(iter.unsafe_next)
 		}
 	}
-	
+
 	final def toList = {
 		var r = List[Long]()
 		val iter = iterator
@@ -304,7 +280,7 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 					oneAccessElements += 1
 				else if (designated_index < index) {
 					d += index - designated_index
-				}else {
+				} else {
 					d += index + (table_length - designated_index)
 				}
 
@@ -323,12 +299,12 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 
 		while (iter.hasNext) {
 			val elem = iter.unsafe_next
-			
+
 			var i = 0
-			while(i<64) {
-			  if((elem & (1L << i)) != 0)
-			    result(i) += 1
-			  i += 1
+			while (i < 64) {
+				if ((elem & (1L << i)) != 0)
+					result(i) += 1
+				i += 1
 			}
 		}
 
@@ -342,18 +318,16 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		val r = new StringBuilder
 		r append "bd:"
 
-		for(i <- 0 until bd.length) {
-			if(bd(i) != 0 ) {
+		for (i <- 0 until bd.length) {
+			if (bd(i) != 0) {
 				r append " "
 				r append i
 				r append ":"
-				r append "%3f".format(bd(i).asInstanceOf[Double]/max)
+				r append "%3f".format(bd(i).asInstanceOf[Double] / max)
 			}
 		}
 
 		r.result
 	}
-
 }
-
 
