@@ -54,7 +54,8 @@ class ConsolenStatusObserver extends StatusObserver {
 object TUI {
 
 	def main(args: Array[String]) {
-		println("Peg Solitaire 0.4\n" +
+		System.nanoTime()
+		println("Peg Solitaire v5\n" +
 			"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 			"  This program is free software: you can redistribute it and/or modify\n" +
 			"  it under the terms of the GNU General Public License version 3 as published by\n" +
@@ -99,7 +100,6 @@ object TUI {
 			args(i) match {
 				case "-full" => arg_full = true
 				case "-count" => arg_count = true
-				case "-board" =>
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
 				case "-thread-count" =>
