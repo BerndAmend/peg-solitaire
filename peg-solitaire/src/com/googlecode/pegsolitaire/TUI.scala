@@ -31,7 +31,7 @@ class ConsolenStatusObserver extends StatusObserver {
 	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
 		printColoredText(", found " + solution.size + " fields", Color.green)
 		if (Helper.enableDebug)
-			printlnlnDebug(" " + solution.depth + " " + solution.bitDistributionString)
+			printlnlnDebug(" " + solution.depth)
 		else
 			println()
 	}
@@ -39,7 +39,6 @@ class ConsolenStatusObserver extends StatusObserver {
 	def begin_backward_cleaning_step(removed_pegs: Int) = printColoredText("clean field list with " + removed_pegs + " removed pegs", Color.green)
 	def end_backward_cleaning_step(removed_pegs: Int, deadends: Long) = {
 		printColoredText(", found " + deadends + " dead ends\n", Color.green)
-		//printDepthDebug(solution(i+next))
 	}
 
 	def dead_ends(count: Long) = printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
