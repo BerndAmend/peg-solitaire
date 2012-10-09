@@ -53,6 +53,7 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	 * number of elements inside the set
 	 */
 	def size = _size
+	def table_size = table.size
 
 	/**
 	 * current fill state in percent
@@ -81,7 +82,6 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		final def next: Long = {
 			if (!hasNext)
 				throw new java.util.NoSuchElementException()
-
 			unsafe_next
 		}
 
@@ -149,7 +149,6 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		}
 	}
 
-	// adds the element without checking if there is enough space or if e is invalid
 	private final def internal_add(e: Long) {
 		val index = findOrEmpty(e)
 		if (table(index) == LongHashSet.INVALID_ELEMENT) {
@@ -159,25 +158,26 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	}
 
 	final def clear() {
-		java.util.Arrays.fill(table, LongHashSet.INVALID_ELEMENT)
-		_size = 0
-	}
-
-	final def clear_and_free() {
 		table = LongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE)
 		table_length_minus_1 = table.length - 1
 		_size = 0
 	}
 
+	final def clear(new_expected_size: Int) {
+		_size = 0
+		table = null
+		ensureSizeFor(new_expected_size)
+	}
+
 	final def contains(o: Long) = table(findOrEmpty(o)) != LongHashSet.INVALID_ELEMENT
 
-	final def iterator = new HashSetIterator
-	final def iterator(groupID: Int, groupSize: Int) = new HashSetIterator(groupID, groupSize)
+	final def iter = new HashSetIterator
+	final def iter(groupID: Int, groupSize: Int) = new HashSetIterator(groupID, groupSize)
 
 	/**
 	 * Ensures the set is large enough to contain the specified number of entries.
 	 */
-	private final def ensureSizeFor(expectedSize: Int) {
+	final def ensureSizeFor(expectedSize: Int) {
 		if (table != null && table.length * 3 >= expectedSize * 4)
 			return
 
@@ -239,20 +239,15 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	}
 
 	final def foreach(func: Long => Unit) {
-		val iter = iterator
+		val i = iter
 
-		while (iter.hasNext) {
-			func(iter.unsafe_next)
-		}
+		while (i.hasNext)
+			func(i.unsafe_next)
 	}
 
 	final def toList = {
 		var r = List[Long]()
-		val iter = iterator
-
-		while (iter.hasNext) {
-			r ::= iter.unsafe_next
-		}
+		foreach( r ::= _)
 		r
 	}
 
@@ -294,11 +289,11 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 	}
 
 	def bitDistribution: Array[Long] = {
-		val iter = iterator
+		val it = iter
 		val result = Array.fill[Long](64)(0L)
 
-		while (iter.hasNext) {
-			val elem = iter.unsafe_next
+		while (it.hasNext) {
+			val elem = it.unsafe_next
 
 			var i = 0
 			while (i < 64) {
@@ -330,4 +325,3 @@ final class LongHashSet(t: Array[Long], s: Int) { // extends scala.collection.It
 		r.result
 	}
 }
-

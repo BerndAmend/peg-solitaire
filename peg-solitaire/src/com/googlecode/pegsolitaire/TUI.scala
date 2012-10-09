@@ -20,12 +20,12 @@ package com.googlecode.pegsolitaire
 import Helper._
 
 class ConsolenStatusObserver extends StatusObserver {
-	def begin_forward_calculation() = println("Begin forward calculation")
+	def begin_forward_calculation() = println("Calculate possible fields")
 
-	def end_forward_calculation(required_time: Long) = println("Forward calculation took " + Helper.millisecToString(required_time))
+	def end_forward_calculation(required_time: Long) = println("calculation took " + Helper.millisecToString(required_time))
 
-	def begin_backward_cleaning() = println("Begin backward cleaning")
-	def end_backward_cleaning(required_time: Long) = println("Backward cleaning took " + Helper.millisecToString(required_time))
+	def begin_backward_cleaning() = println("Delete fields that doesn't result in the requested solution")
+	def end_backward_cleaning(required_time: Long) = println("delete took " + Helper.millisecToString(required_time))
 
 	def begin_forward_calculation_step(removed_pegs: Int) = printColoredText("search fields with " + removed_pegs + " removed pegs", Color.green)
 	def end_forward_calculation_step(removed_pegs: Int, solution: LongHashSet) {
@@ -41,7 +41,7 @@ class ConsolenStatusObserver extends StatusObserver {
 		printColoredText(", found " + deadends + " dead ends\n", Color.green)
 	}
 
-	def dead_ends(count: Long) = printlnColoredText("There are " + count + " fields which doesn't result in a 1 peg solution", Color.blue)
+	def dead_ends(count: Long) = printlnColoredText("There were " + count + " dead ends", Color.blue)
 }
 
 /**
@@ -68,8 +68,8 @@ object TUI {
 			"    15holes: simple test board\n" +
 			"    euro: standard european\n\n" +
 			"  -full                calculate all solutions for all possible start fields,\n" +
-			"                        by default you have to select the startfield\n" +
-			"  -count               count the number of ways to a solution (this may take a while)\n" +
+			"                        by default you have to select the start and end field(s)\n" +
+			"  -count               count the number of ways to a solution (this may take a while!!!)\n" +
 			"  -color               enable colored text output\n" +
 			"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
 			"  -debug               enable debug output\n\n" +
@@ -142,17 +142,7 @@ object TUI {
 				println("Simple board:\n\n. o o o o .\no o o o o o\no o . . o o\no o . . o o\no o o o o o\n. o o o o .\n")
 				println("Check board (all move directions have to be allowed):\n\n. . . . . . . o o\n. . . . . . o o o\no o . . . o o o .\no o o . o o o . .\n. o o o o o . . .\n. . o o o . . . .\n. . . o . . . . .\n")
 				println("Please create a board or copy one from above (max 63 holes).\nPress enter 2x to process your input (o = hole, . = blocked):\n")
-				val sb = new StringBuilder
-				var current = ""
-				var done = false
-				do {
-					current = Console.readLine
-					done = current.isEmpty
-					if (!done) {
-						sb append current
-						sb append '\n'
-					}
-				} while (!done)
+				val field = readField
 				var moveDirection = List[MoveDirections.Value]()
 				MoveDirections.values.foreach {
 					m =>
@@ -167,7 +157,7 @@ object TUI {
 
 				var sol: Board = null
 				try {
-					sol = new Board(sb.toString, moveDirection.toArray[MoveDirections.Value])
+					sol = new Board(field, moveDirection.toArray[MoveDirections.Value])
 				} catch {
 					case _ =>
 						printlnError("error: the entered field is invalid, exit")
@@ -182,13 +172,24 @@ object TUI {
 			println(solitaireType.debug_output)
 		}
 
-		val selection: Iterable[Long] = if (arg_full) {
-			solitaireType.possibleStartFields.toList
+		var selection: Iterable[Long] = null
+		var end_pegs = 0
+		var end_field: Long = LongHashSet.INVALID_ELEMENT
+
+		if (arg_full) {
+			selection = solitaireType.possibleStartFields.toList
 		} else {
-			println("Select one or more start fields:")
-			selectFields(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList)
+			println("Select a start field or e to enter your own start field:")
+			selection = List(selectField(solitaireType, solitaireType.getCompleteList(solitaireType.possibleStartFields).toList, true))
+			if (readYesOrNo("Do you want to enter an end field (y/n) ?"))
+					end_field = readStateField(solitaireType, 0)
+			else {
+				println("How many pegs should be left on the field (0 = play as far as possible, -1 = don't clean):")
+				end_pegs = readNumber(-1 until java.lang.Long.bitCount(selection.head)-1)
+			}
 		}
-		Time("Solve")(solitaire = new Solver(solitaireType, selection, observer, thread_count))
+
+		Time("Solve")(solitaire = new Solver(solitaireType, selection, end_pegs, end_field, observer, thread_count))
 
 		try {
 			solitaire.getStart
@@ -241,12 +242,59 @@ object TUI {
 		println(sb.toString)
 	}
 
+	def readField(): String = {
+		val sb = new StringBuilder
+		var current = ""
+		var done = false
+		do {
+			current = Console.readLine
+			done = current.isEmpty
+			if (!done) {
+				sb append current
+				sb append '\n'
+			}
+		} while (!done)
+
+		sb.toString
+	}
+
+	def readStateField(game: Board, template: Long): Long = {
+		println("Please enter a field (x = peg, . = empty)")
+		println(" template:")
+		println(game.toString(template))
+		println()
+		game.fromString(readField)
+	}
+
+	def readNumber(range: Range): Int = {
+		var num = range.start-1
+		while (num < range.start) {
+			print("(x to abort) > ")
+			Console.flush
+			val input = readLine()
+			if (input.toLowerCase == "x") {
+				println("Bye, bye")
+				sys.exit(0)
+			}
+			try {
+				num = input.toInt
+				if (num < range.start || num >= range.end)
+					printlnError("error: invalid selection, please try again")
+			} catch {
+				case _ =>
+					printlnError("error: invalid input, please try again")
+					num = -1
+			}
+		}
+		num
+	}
+
 	/**
 	 * Simple console based game-field selection
 	 *
 	 * @return selected game-field
 	 */
-	def selectField(game: Board, choices: List[Long]): Long = {
+	def selectField(game: Board, choices: List[Long], enter_field_allowed: Boolean): Long = {
 		printFields(game, choices)
 
 		var selection = -1
@@ -259,9 +307,16 @@ object TUI {
 				sys.exit(0)
 			}
 			try {
-				selection = input.toInt
-				if (selection < 0 || selection >= choices.length)
-					printlnError("error: invalid selection, please try again")
+				if(input.toLowerCase == "e") {
+					if(enter_field_allowed) {
+						return readStateField(game, Long.MaxValue)
+					} else
+						printlnError("e is invalid in this mode")
+				} else {
+					selection = input.toInt
+					if (selection < 0 || selection >= choices.length)
+						printlnError("error: invalid selection, please try again")
+				}
 			} catch {
 				case _ =>
 					printlnError("error: invalid input, please try again")
@@ -272,45 +327,6 @@ object TUI {
 		choices(selection)
 	}
 
-	/**
-	 * Simple console based game-field selection
-	 *
-	 * @return selected game-fields
-	 */
-	def selectFields(game: Board, choices: List[Long]): List[Long] = {
-		printFields(game, choices)
-
-		var selected = List[Long]()
-
-		do {
-			print("select multiple fields seperated by spaces (x to abort) > ")
-			val input = readLine()
-
-			val splitted = input.split(' ')
-
-			for (e <- splitted) {
-				if (e.toLowerCase == "x") {
-					println("Bye, bye")
-					sys.exit(0)
-				}
-				try {
-					val num = e.toInt
-					if (num < 0 || num >= choices.length)
-						printlnError("ignore invalid selection: " + num)
-					else
-						selected ::= choices(num)
-					Unit
-				} catch {
-					case _ => printlnError("ignore invalid selection: " + input)
-				}
-			}
-
-			if (selected.isEmpty)
-				println("Nothing selected, try again")
-		} while (selected.isEmpty)
-		selected
-	}
-
 	def solutionBrowser(solitaire: Solver) {
 		while (true) {
 			println("\nSolution Browser: (x = peg, . = empty)")
@@ -318,7 +334,7 @@ object TUI {
 			var f = s(0)
 			while (s.length != 0) {
 				println("Please choose a move: ")
-				f = selectField(solitaire.game, s)
+				f = selectField(solitaire.game, s, false)
 				println()
 				println("Current field " + (solitaire.game.length - java.lang.Long.bitCount(f)) + "")
 				println(solitaire.game.toString(f))

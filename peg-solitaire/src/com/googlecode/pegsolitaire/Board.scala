@@ -206,12 +206,8 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	private val movemask_transformation_tests = movemask map { toArray(_) }
 
 	private def is_transformation_valid(transformation: Array[Array[Int]] => Array[Array[Int]]): Boolean = {
-		if (have_equal_shape(lookUpTable, transformation(lookUpTable)))
-			true
-		else
-			false
-
-		movemask_transformation_tests forall { i => movemask.contains(toLong(transformation(i))) }
+		have_equal_shape(lookUpTable, transformation(lookUpTable)) &&
+		movemask_transformation_tests.forall(i => movemask.contains(toLong(transformation(i))))
 	}
 
 	private def generateCode(in: Array[Array[Int]]): String = {
@@ -382,10 +378,8 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 		val base = (1L << length) - 1L
 
-		for (i <- 0 until length) {
-			val newElement = base ^ (1L << i)
-			hashSet += boardHelper.getNormalform(newElement)
-		}
+		for (i <- 0 until length)
+			hashSet += boardHelper.getNormalform(base ^ (1L << i))
 
 		hashSet
 	}
@@ -441,59 +435,28 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	 */
 	def fromString(field: String): Long = java.lang.Long.parseLong(field.replaceAll("\n", "").replaceAll(" ", "").replaceAll("\t", "").replaceAll("x", "1").replaceAll("\\.", "0"), 2)
 
-	private final def addRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet) {
-		var i = 0
-		val size = movemask_size
-		while (i < size) {
-			val n = applyMove(checkfield, field, i)
-			if (n != Long.MinValue)
-				solutions += n
-			i += 1
-		}
-	}
+	final def getNormalform(field: Long) = boardHelper.getNormalform(field)
 
-	/**
-	 * @return true : follower was found
-	 */
-	final def addFollower(field: Long, solutions: LongHashSet) = addRelatedFields(field, field, solutions)
-
-	/**
-	 * @return true : predecessor was found
-	 */
-	final def addPredecessor(field: Long, solutions: LongHashSet) = addRelatedFields(~field, field, solutions)
+	final def addFollower(field: Long, sol: LongHashSet): Unit = applyMoves(field, field){n => sol += n}
 
 	/**
 	 * return true if field has a follower/predecessor in the solutions HashSet
 	 */
-	private final def hasRelatedFields(checkfield: Long, field: Long, solutions: LongHashSet): Boolean = {
-		var i = 0
-		val size = movemask_size
-		while (i < size) {
-			val n = applyMove(checkfield, field, i)
-			if (n != Long.MinValue && solutions.contains(n))
-				return true
+	final def hasFollower(field: Long, solutions: LongHashSet): Boolean = {
+		var i = -1
+		while (i < movemask_size-1) {
 			i += 1
+			applyMove(field, field, i)(n => if(solutions.contains(n)) i=Int.MaxValue)
 		}
-		false
+		i == Int.MaxValue
 	}
-
-	final def hasFollower(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(field, field, solutions)
-
-	final def hasPredecessor(field: Long, solutions: LongHashSet): Boolean = hasRelatedFields(~field, field, solutions)
 
 	/**
 	 * you may want to call getComplete list on the result
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
 		var result = new LongHashSet
-		var i = 0
-		val size = movemask_size
-		while (i < size) {
-			val n = applyMove(checkfield, field, i)
-			if (n != Long.MinValue && searchSet.contains(n))
-				result += n
-			i += 1
-		}
+		applyMoves(field, field){n => if(searchSet.contains(n)) result += n}
 		result
 	}
 
@@ -510,13 +473,19 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		output
 	}
 
-	private final def applyMove(checkfield: Long, field: Long, movemaskid: Int): Long = {
-		val mask = movemask(movemaskid)
+	private final def applyMove(checkfield: Long, field: Long, i: Int)(cmd: Long => Unit) {
+		val mask = movemask(i)
 		val tmp = checkfield & mask
-		if (tmp == checkmask1(movemaskid) || tmp == checkmask2(movemaskid))
-			boardHelper.getNormalform(field ^ mask)
-		else
-			Long.MinValue
+		if (tmp == checkmask1(i) || tmp == checkmask2(i))
+			cmd(boardHelper.getNormalform(field ^ mask))
+	}
+
+	private final def applyMoves(checkfield: Long, field: Long)(cmd: Long => Unit) {
+		var i = 0
+		while (i < movemask_size) {
+			applyMove(checkfield, field, i)(cmd)
+			i += 1
+		}
 	}
 
 	private def print_look_up_table(in: Array[Array[Int]]) {
@@ -546,9 +515,6 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 		movemask_transformation_tests foreach (print_look_up_table(_, r))
 
-		// output movemask
-		// output checkmask1
-		// output checkmask2
 		r append "board_helper sourcecode\n"
 		r append board_helper_sourcecode
 

@@ -102,33 +102,57 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 
 	def this(game: Board, observer: StatusObserver) = this(game, observer, 0)
 
-	def this(game: Board, startFields: Iterable[Long], observer: StatusObserver, threadcount: Int = 0) {
+	def this(game: Board, startFields: Iterable[Long], end_pegs: Int, endField: Long,
+			observer: StatusObserver, threadcount: Int = 0) {
 		this(game, observer, threadcount)
 
-		for (e <- startFields) {
-			val bc = game.length - java.lang.Long.bitCount(e)
-			if (bc <= 0)
-				throw new Exception("Invalid number of bits set (" + e.toString + ")")
+		require(startFields != null && !startFields.isEmpty)
 
-			solution(bc) += e
+		val start_set = game.length - java.lang.Long.bitCount(startFields.head)
+		require(start_set > 0)
+		for (e <- startFields) {
+			require(game.length - java.lang.Long.bitCount(e) == start_set)
+			solution(start_set) += game.getNormalform(e)
 		}
+
+		val dont_clean = end_pegs == -1
+
+		var end_set = game.length - (if(dont_clean) 0 else end_pegs)
+		if(endField != LongHashSet.INVALID_ELEMENT) {
+			end_set = game.length - java.lang.Long.bitCount(endField)
+		}
+		require(end_set > start_set)
 
 		observer.begin_forward_calculation()
 		Time(observer.end_forward_calculation _) {
-			for (sol <- (getStartNum + 1) until game.length) {
+			for (sol <- (getStartNum + 1) to end_set) {
 				observer.begin_forward_calculation_step(sol)
 				calculateForward(sol)
 				observer.end_forward_calculation_step(sol, solution(sol))
 			}
 		}
 
-		// cleaning the gamefield after every step is useless
-		observer.begin_backward_cleaning()
-		Time(observer.end_backward_cleaning _) {
-			cleanBackward(getEndNum)
-		}
+		if(!dont_clean) {
+			//
+			if(endField != LongHashSet.INVALID_ELEMENT) {
+				val ef = game.getNormalform(endField)
+				// check if endField is in the solution set
+				if(solution(end_set).contains(ef)) {
+					solution(end_set).clear
+					solution(end_set) += ef
+				} else {
+					throw new Exception("entered endField is not reachable")
+				}
+			}
 
-		observer.dead_ends(deadends.sum)
+			// cleaning the gamefield after every step is useless
+			observer.begin_backward_cleaning()
+			Time(observer.end_backward_cleaning _) {
+				cleanBackward(getEndNum)
+			}
+
+			observer.dead_ends(deadends.sum)
+		}
 	}
 
 	protected def getCompleteList(solutionNumber: Int): LongHashSet = game.getCompleteList(solution(solutionNumber))
@@ -236,91 +260,63 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		count
 	}
 
-	private def calculateForward(sol: Int): Unit = calculateNextStep(sol, -1, true)
-	private def calculateBackward(sol: Int): Unit = calculateNextStep(sol, 1, false)
-
-	private def calculateNextStep(sol: Int, next: Int, follower: Boolean) {
-		val results = (0 until thread_count).map {
+	private def calculateForward(sol: Int) {
+		val current = solution(sol)
+		(0 until thread_count).map {
 			threadID =>
-				future[Boolean] {
-					val iter = solution(sol + next).iterator(threadID, thread_count)
-					var result = new LongHashSet()
-					if (follower) {
-						while (iter.hasNext) {
-							game.addFollower(iter.unsafe_next, result)
-						}
-					} else {
-						while (iter.hasNext) {
-							game.addPredecessor(iter.unsafe_next, result)
+				future {
+					val iter = solution(sol - 1).iter(threadID, thread_count)
+					var result = if(thread_count == 1) solution(sol) else new LongHashSet()
+					while (iter.hasNext) {
+						game.addFollower(iter.unsafe_next, result)
+					}
+					if(thread_count > 1) {
+						current.synchronized {
+							current += result
 						}
 					}
-					val current = solution(sol)
-					current.synchronized {
-						current += result
-					}
-					true
+					Unit
 				}
-		}
-
-		results foreach (_())
+		}.foreach(_())
 	}
 
-	private def cleanForward(pos: Int) = cleanNextStep(pos, 1, pos, getEndNum, false) //game.hasPredecessor)
-	private def cleanBackward(pos: Int) = cleanNextStep(pos, -1, pos, getStartNum, true) //game.hasFollower)
+	@scala.annotation.tailrec
+	private def cleanBackward(pos: Int) {
+		observer.begin_backward_cleaning_step(pos - 1)
 
-	private def cleanNextStep(pos: Int, next: Int, from: Int, to: Int, follower: Boolean) { // func: (Long, LongHashSet) => Boolean) {
-		for (i <- from.until(to, next)) {
+		val previous = solution(pos - 1)
+		val current = solution(pos)
+		val old_size= previous.size
 
-			observer.begin_backward_cleaning_step(i + next)
-
-			val results = (0 until thread_count).map {
-				threadID =>
-					future[(Long, LongHashSet)] {
-						var deadEndFields = 0L
-						val current = solution(i)
-						val iter = solution(i + next).iterator(threadID, thread_count)
-						var result = new LongHashSet
-						if (follower) {
-							while (iter.hasNext) {
-								val elem = iter.unsafe_next
-								if (game.hasFollower(elem, current)) {
-									result += elem
-								} else {
-									deadEndFields += 1L
-								}
-							}
-						} else {
-							while (iter.hasNext) {
-								val elem = iter.unsafe_next
-								if (game.hasPredecessor(elem, current)) {
-									result += elem
-								} else {
-									deadEndFields += 1L
-								}
-							}
-						}
-						(deadEndFields, result)
-					}
-			}
-
-			// merge
-			val resultSize = results.foldLeft(0)(_ + _()._2.size) // wait for results and calculate new hashset size
-			val newsol = new LongHashSet(resultSize)
-			var deadEndFields = 0L
-			for (e <- results) {
-				val r = e()
-				deadEndFields += r._1 // update dead end counter
-				newsol += r._2
-			}
-
-			solution(i + next) = newsol
-			deadends(i + next) += deadEndFields
-
-			observer.end_backward_cleaning_step(i + next, deadEndFields)
-			if (deadEndFields == 0L) {
-				return
-			}
+		@scala.annotation.tailrec
+		def loop(iter: LongHashSet#HashSetIterator, result: LongHashSet): LongHashSet = {
+			if(iter.hasNext) {
+				val elem = iter.unsafe_next
+				if (game.hasFollower(elem, current))
+					result += elem
+				loop(iter, result)
+			} else
+				result
 		}
+
+		if(thread_count > 1) {
+			val r = (0 until thread_count).map(
+					id => future(loop(previous.iter(id, thread_count), new LongHashSet))
+			)
+			previous.clear( r.foldLeft(0)(_ + _().size) )
+			r foreach (previous += _())
+		} else {
+			val new_previous = new LongHashSet
+			loop(previous.iter, new_previous)
+			solution(pos - 1) = new_previous
+		}
+
+		val deadEndFields = old_size - solution(pos - 1).size
+		deadends(pos - 1) = deadEndFields
+
+		observer.end_backward_cleaning_step(pos - 1, deadEndFields)
+
+		if (deadEndFields != 0L) cleanBackward(pos-1) else return
 	}
 
 }
