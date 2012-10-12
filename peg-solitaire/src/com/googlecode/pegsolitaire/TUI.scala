@@ -189,7 +189,15 @@ object TUI {
 			}
 		}
 
-		Time("Solve")(solitaire = new Solver(solitaireType, selection, end_pegs, end_field, observer, thread_count))
+		try {
+			Time("Solve") {
+				solitaire = new Solver(solitaireType, selection, end_pegs, end_field, observer, thread_count)
+			}
+		} catch {
+			case e: Exception =>
+				printlnError("error: " + e.getMessage())
+				return
+		}
 
 		try {
 			solitaire.getStart

@@ -115,13 +115,16 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			solution(start_set) += game.getNormalform(e)
 		}
 
-		val dont_clean = end_pegs == -1
+		val clean = end_pegs >= 0
 
-		var end_set = game.length - (if(dont_clean) 0 else end_pegs)
+		var end_set = game.length - (if(clean) end_pegs else 0)
 		if(endField != LongHashSet.INVALID_ELEMENT) {
-			end_set = game.length - java.lang.Long.bitCount(endField)
+			end_set = game.length - java.lang.Long.bitCount(endField) - 1
 		}
 		require(end_set > start_set)
+
+		if(end_set >= game.length)
+			end_set -= 1
 
 		observer.begin_forward_calculation()
 		Time(observer.end_forward_calculation _) {
@@ -132,24 +135,18 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			}
 		}
 
-		if(!dont_clean) {
-			//
-			if(endField != LongHashSet.INVALID_ELEMENT) {
-				val ef = game.getNormalform(endField)
-				// check if endField is in the solution set
-				if(solution(end_set).contains(ef)) {
-					solution(end_set).clear
-					solution(end_set) += ef
-				} else {
-					throw new Exception("entered endField is not reachable")
-				}
-			}
+		if(clean) {
+			if(endField != LongHashSet.INVALID_ELEMENT)
+				solution(end_set + 1) += game.getNormalform(endField)
 
 			// cleaning the gamefield after every step is useless
 			observer.begin_backward_cleaning()
 			Time(observer.end_backward_cleaning _) {
 				cleanBackward(getEndNum)
 			}
+
+			if(solution(getEndNum-1).isEmpty)
+				throw new Exception("Entered end field is not reachable.")
 
 			observer.dead_ends(deadends.sum)
 		}
