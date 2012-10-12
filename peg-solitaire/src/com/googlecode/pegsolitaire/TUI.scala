@@ -267,7 +267,7 @@ object TUI {
 	}
 
 	def readStateField(game: Board, template: Long): Long = {
-		println("Please enter a field (x = peg, . = empty)")
+		println("Please enter a field (x = peg, . = empty)\nPress enter 2x to process your input.")
 		println(" template:")
 		println(game.toString(template))
 		println()
