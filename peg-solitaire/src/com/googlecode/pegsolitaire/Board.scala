@@ -104,41 +104,41 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			checkmask2 ::= ((1L << lookUpTable(pos2._2)(pos2._1)) | (1L << lookUpTable(pos3._2)(pos3._1)))
 		}
 
-		for (y <- 0 until lookUpTable.length) {
-			for (x <- 0 until lookUpTable(0).length) {
-				val current = lookUpTable(y)(x) != -1
+		for {
+			y <- 0 until lookUpTable.length
+			x <- 0 until lookUpTable(0).length
+		} {
+			val current = lookUpTable(y)(x) != -1
 
-				moveDirections foreach {
-					_ match {
-						case MoveDirections.Horizontal =>
-							val right1 = if (x + 1 < lookUpTable(0).length) (lookUpTable(y)(x + 1) != -1) else false
-							val right2 = if (x + 2 < lookUpTable(0).length) (lookUpTable(y)(x + 2) != -1) else false
+			moveDirections foreach {
+				_ match {
+					case MoveDirections.Horizontal =>
+						val right1 = if (x + 1 < lookUpTable(0).length) (lookUpTable(y)(x + 1) != -1) else false
+						val right2 = if (x + 2 < lookUpTable(0).length) (lookUpTable(y)(x + 2) != -1) else false
 
-							if (current && right1 && right2)
-								addMove((x, y), (x + 1, y), (x + 2, y))
+						if (current && right1 && right2)
+							addMove((x, y), (x + 1, y), (x + 2, y))
 
-						case MoveDirections.Vertical =>
-							val down1 = if (y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x) != -1) else false
-							val down2 = if (y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x) != -1) else false
+					case MoveDirections.Vertical =>
+						val down1 = if (y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x) != -1) else false
+						val down2 = if (y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x) != -1) else false
 
-							if (current && down1 && down2)
-								addMove((x, y), (x, y + 1), (x, y + 2))
+						if (current && down1 && down2)
+							addMove((x, y), (x, y + 1), (x, y + 2))
 
-						case MoveDirections.LeftDiagonal =>
-							val leftDiagonal1 = if (x + 1 < lookUpTable(0).length && y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x + 1) != -1) else false
-							val leftDiagonal2 = if (x + 2 < lookUpTable(0).length && y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x + 2) != -1) else false
+					case MoveDirections.LeftDiagonal =>
+						val leftDiagonal1 = if (x + 1 < lookUpTable(0).length && y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x + 1) != -1) else false
+						val leftDiagonal2 = if (x + 2 < lookUpTable(0).length && y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x + 2) != -1) else false
 
-							if (current && leftDiagonal1 && leftDiagonal2)
-								addMove((x, y), (x + 1, y + 1), (x + 2, y + 2))
+						if (current && leftDiagonal1 && leftDiagonal2)
+							addMove((x, y), (x + 1, y + 1), (x + 2, y + 2))
 
-						case MoveDirections.RightDiagonal =>
-							val rightDiagonal1 = if (x - 1 >= 0 && y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x - 1) != -1) else false
-							val rightDiagonal2 = if (x - 2 >= 0 && y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x - 2) != -1) else false
+					case MoveDirections.RightDiagonal =>
+						val rightDiagonal1 = if (x - 1 >= 0 && y + 1 < lookUpTable.length) (lookUpTable(y + 1)(x - 1) != -1) else false
+						val rightDiagonal2 = if (x - 2 >= 0 && y + 2 < lookUpTable.length) (lookUpTable(y + 2)(x - 2) != -1) else false
 
-							if (current && rightDiagonal1 && rightDiagonal2)
-								addMove((x, y), (x - 1, y + 1), (x - 2, y + 2))
-					}
-
+						if (current && rightDiagonal1 && rightDiagonal2)
+							addMove((x, y), (x - 1, y + 1), (x - 2, y + 2))
 				}
 			}
 		}
@@ -196,9 +196,9 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		for (
 			y <- 0 until in1.length;
 			x <- 0 until in2(0).length
-		) {
 			if ((in1(y)(x) == -1 || in2(y)(x) == -1) && in1(y)(x) != in2(y)(x))
-				return false
+		) {
+			return false
 		}
 		true
 	}
@@ -216,7 +216,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		// calculate operations
 		val output = new scala.collection.mutable.HashMap[Int, Long]
 
-		for (i <- (field.length - 1).to(0, -1)) {
+		for (i <- (field.length - 1) to 0 by -1) {
 			val mask = 1L << i
 
 			val e = field(field.length - 1 - i)
@@ -259,7 +259,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 		result append ")"
 
-		result.result()
+		result.result
 	}
 
 	private val _board_helper_sourcecode: String = {
@@ -338,11 +338,11 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		val r = new StringBuilder
 
 		r append "result(0) = new com.googlecode.pegsolitaire.BoardHelper {\n"
-		r append get_normalform.result()
-		r append get_equivalent_fields.result()
+		r append get_normalform.result
+		r append get_equivalent_fields.result
 		r append "}\n"
 
-		r.result()
+		r.result
 	}
 
 	def board_helper_sourcecode: String = _board_helper_sourcecode
@@ -362,14 +362,13 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		result(0)
 	}
 
-	{ // verify that the BoardHelper ist correct
-		movemask foreach {
-			mask =>
-				// check if all getEquivalentFields are valid moves
-				boardHelper.getEquivalentFields(mask) foreach (v => require(movemask.contains(v)))
+	{	// verify that the BoardHelper ist correct
+		for(mask <- movemask) {
+			// check if all getEquivalentFields are valid moves
+			boardHelper.getEquivalentFields(mask) foreach (v => require(movemask.contains(v)))
 
-				// check if the mask is in the getEquivalentFields list
-				require(boardHelper.getEquivalentFields(mask).contains(mask))
+			// check if the mask is in the getEquivalentFields list
+			require(boardHelper.getEquivalentFields(mask).contains(mask))
 		}
 	}
 
@@ -390,31 +389,21 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	def toArray(field: Long): Array[Array[Int]] = {
 		var output = lookUpTable map (_.clone())
 
-		for (
+		for {
 			y <- 0 until output.length;
 			x <- 0 until output(0).length
-		) {
-			if (output(y)(x) != -1) {
-				if ((field & (1L << output(y)(x))) == 0) {
-					output(y)(x) = 0
-				} else {
-					output(y)(x) = 1
-				}
-			}
-		}
+			if output(y)(x) != -1
+		} output(y)(x) = if ((field & (1L << output(y)(x))) == 0) 0 else 1
 		output
 	}
 
 	def toLong(in: Array[Array[Int]]) = {
 		var r = 0L
-		for (
+		for {
 			y <- 0 until in.length;
 			x <- 0 until in(0).length
-		) {
-			if (in(y)(x) == 1) {
-				r |= 1L << lookUpTable(y)(x)
-			}
-		}
+			if (in(y)(x) == 1)
+		} r |= 1L << lookUpTable(y)(x)
 		r
 	}
 
@@ -424,7 +413,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	def toString(field: Long): String = {
 		var output = printMask
 
-		for (i <- (length - 1).to(0, -1))
+		for (i <- (length - 1) to 0 by -1)
 			output = output.replaceFirst("P", (if ((field & (1L << i)) == 0) "." else "x"))
 
 		output
@@ -518,7 +507,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		r append "board_helper sourcecode\n"
 		r append board_helper_sourcecode
 
-		r.result()
+		r.result
 	}
 
 }
