@@ -230,31 +230,26 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		// init the current with BigDecimal = 1
 		game.getCompleteList(solution(game.length - 1)) foreach { v => current(v) = 1 }
 
-		for (i <- (game.length - 2).to(1, -1)) {
+		for (i <- (game.length - 2) to 1 by -1) {
 			print("  determine values for " + i + " removed pegs\r")
 			Console.flush
 
 			previous = current
 			current = new scala.collection.mutable.HashMap[Long, BigDecimal]
 
-			game.getCompleteList(solution(i)) foreach {
-				v =>
-					getFollower(v) foreach {
-						f =>
-							try {
-								current(v) += previous(f)
-							} catch {
-								case _ => current(v) = previous(f)
-							}
-					}
+			for {
+				v <- game.getCompleteList(solution(i))
+				f <- getFollower(v)
+			} {
+				try {
+					current(v) += previous(f)
+				} catch {
+					case _ => current(v) = previous(f)
+				}
 			}
 		}
 
-		var count = BigDecimal(0)
-		for (s <- current)
-			count += s._2
-
-		count
+		current.foldLeft(BigDecimal(0))(_ + _._2)
 	}
 
 	private def calculateForward(sol: Int) {
