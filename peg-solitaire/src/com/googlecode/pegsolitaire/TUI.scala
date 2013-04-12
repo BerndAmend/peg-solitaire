@@ -111,7 +111,7 @@ object TUI {
 							return
 						}
 					} catch {
-						case _ =>
+						case _ : NumberFormatException =>
 							printlnError("error: invalid argument for -thread-count, exit")
 							return
 					}
@@ -119,7 +119,7 @@ object TUI {
 					try {
 						selectedGame = Boards.withName(args(i))
 					} catch {
-						case _ =>
+						case _ : NoSuchElementException =>
 							printlnError("error: unknown parameter " + s + " exit")
 							return
 					}
@@ -159,7 +159,7 @@ object TUI {
 				try {
 					sol = new Board(field, moveDirection.toArray[MoveDirections.Value])
 				} catch {
-					case _ =>
+					case _ : Exception =>
 						printlnError("error: the entered field is invalid, exit")
 						return
 				}
@@ -202,7 +202,7 @@ object TUI {
 		try {
 			solitaire.getStart
 		} catch {
-			case _ =>
+			case _ : Throwable =>
 				printlnError("error: there is no solution, sorry")
 				return
 		}
@@ -289,7 +289,7 @@ object TUI {
 				if (num < range.start || num >= range.end)
 					printlnError("error: invalid selection, please try again")
 			} catch {
-				case _ =>
+				case _ : NumberFormatException =>
 					printlnError("error: invalid input, please try again")
 					num = -1
 			}
@@ -326,7 +326,7 @@ object TUI {
 						printlnError("error: invalid selection, please try again")
 				}
 			} catch {
-				case _ =>
+				case _ : Exception =>
 					printlnError("error: invalid input, please try again")
 					selection = -1
 			}

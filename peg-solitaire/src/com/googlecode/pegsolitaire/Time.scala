@@ -33,5 +33,5 @@ object Time {
 		result
 	}
 
-	def apply[T](name: String)(block: => T) = apply[T]((time: Long) => println(name + " (took " + Helper.millisecToString(time) + ")"))(block)
+	def apply[T](name: String)(block: => T): T = apply[T]((time: Long) => println(name + " (took " + Helper.millisecToString(time) + ")"))(block)
 }

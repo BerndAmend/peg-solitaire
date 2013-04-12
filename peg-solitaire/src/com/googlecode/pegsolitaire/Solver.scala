@@ -17,7 +17,9 @@
 
 package com.googlecode.pegsolitaire
 import Helper._
-import scala.concurrent.ops._
+import scala.concurrent.{future, Await}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 trait StatusObserver {
 	def begin_forward_calculation()
@@ -241,11 +243,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 				v <- game.getCompleteList(solution(i))
 				f <- getFollower(v)
 			} {
-				try {
-					current(v) += previous(f)
-				} catch {
-					case _ => current(v) = previous(f)
-				}
+				current(v) += previous(f)
 			}
 		}
 
@@ -269,7 +267,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 					}
 					Unit
 				}
-		}.foreach(_())
+		}.foreach(Await.result(_, Duration.Inf))
 	}
 
 	@scala.annotation.tailrec
@@ -295,8 +293,8 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			val r = (0 until thread_count).map(
 					id => future(loop(previous.iter(id, thread_count), new LongHashSet))
 			)
-			previous.clear( r.foldLeft(0)(_ + _().size) )
-			r foreach (previous += _())
+			previous.clear( r.foldLeft(0)(_ + Await.result(_, Duration.Inf).size) )
+			r foreach (previous += Await.result(_, Duration.Inf))
 		} else {
 			val new_previous = new LongHashSet
 			loop(previous.iter, new_previous)
