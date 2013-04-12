@@ -47,8 +47,6 @@ class ConsolenStatusObserver extends StatusObserver {
 /**
  * TODO:
  *  rewrite argument parser
- *  add functionality to allow the user to define how many destination pegs should stay on the board
- *  add functionality to allow the user to define a start field
  *  allow the user to search a solution for a given field
  */
 object TUI {
