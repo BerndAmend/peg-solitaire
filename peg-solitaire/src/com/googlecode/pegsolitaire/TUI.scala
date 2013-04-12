@@ -1,6 +1,6 @@
 /**
  * Peg Solitaire
- * Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
@@ -55,8 +55,8 @@ object TUI {
 
 	def main(args: Array[String]) {
 		System.nanoTime()
-		println("Peg Solitaire v5\n" +
-			"  Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
+		println("Peg Solitaire v6\n" +
+			"  Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 			"  This program is free software: you can redistribute it and/or modify\n" +
 			"  it under the terms of the GNU General Public License version 3 as published by\n" +
 			"  the Free Software Foundation. This program comes with ABSOLUTELY NO WARRANTY\n")

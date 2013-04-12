@@ -1,6 +1,6 @@
 /**
  * Peg Solitaire Solver
- * Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  * based on the java implementation by Google Inc.
  *

@@ -1,6 +1,6 @@
 /**
  * Peg Solitaire
- * Copyright (C) 2010-2012 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ * Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 3 as
