@@ -79,10 +79,10 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 		}
 	}
 
-	override def +=(e: Long) {
-		require(e != LongHashSet.INVALID_ELEMENT)
+	override def +=(o: Long) {
+		require(o != LongHashSet.INVALID_ELEMENT)
 		ensureSizeFor(_size + 1)
-		internal_add(e)
+		internal_add(o)
 	}
 
 	// add the elements without checking if there is enough space
@@ -96,11 +96,11 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 		}
 	}
 
-	private def internal_add(e: Long) {
-		val index = findOrEmpty(e)
+	private def internal_add(o: Long) {
+		val index = findOrEmpty(o)
 		if (table(index) == LongHashSet.INVALID_ELEMENT) {
 			_size += 1
-			table(index) = e
+			table(index) = o
 		}
 	}
 

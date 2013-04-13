@@ -83,10 +83,10 @@ class IntHashSet(t: Array[Int], s: Int) {
 		internal_addAll(c.table)
 	}
 
-	def +=(e: Int) {
-		require(e != IntHashSet.INVALID_ELEMENT)
+	def +=(o: Int) {
+		require(o != IntHashSet.INVALID_ELEMENT)
 		ensureSizeFor(_size + 1)
-		internal_add(e)
+		internal_add(o)
 	}
 
 	// add the elements without checking if there is enough space
@@ -100,11 +100,11 @@ class IntHashSet(t: Array[Int], s: Int) {
 		}
 	}
 
-	private def internal_add(e: Int) {
-		val index = findOrEmpty(e)
+	private def internal_add(o: Int) {
+		val index = findOrEmpty(o)
 		if (table(index) == IntHashSet.INVALID_ELEMENT) {
 			_size += 1
-			table(index) = e
+			table(index) = o
 		}
 	}
 

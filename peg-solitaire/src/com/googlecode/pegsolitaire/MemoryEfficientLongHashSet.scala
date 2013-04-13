@@ -64,13 +64,13 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 		}
 	}
 
-	override def +=(e: Long) {
-		if(e <= Int.MaxValue)
-			int_hash_set_lower += e.asInstanceOf[Int]
-		else if(e <= 0xffffffff)
-			int_hash_set_higher += (e & 0x7fffffff).asInstanceOf[Int]
+	override def +=(o: Long) {
+		if(o <= Int.MaxValue)
+			int_hash_set_lower += o.asInstanceOf[Int]
+		else if(o <= 0xffffffff)
+			int_hash_set_higher += (o & 0x7fffffff).asInstanceOf[Int]
 		else
-			long_hash_set += e
+			long_hash_set += o
 	}
 
 	override def clear() {

@@ -87,13 +87,33 @@ trait LongHashSet {
 	def used: Double
 	def isEmpty = size == 0
 
+	/**
+	 * Add all elements from the LongHashSet c to the current instance.
+	 */
 	def +=(c: LongHashSet)
 
-	def +=(e: Long)
+	/**
+	 * Add the element e to the HashSet.
+	 * If e == LongHashSet.INVALID_ELEMENT an exception is thrown.
+	 */
+	def +=(o: Long)
+
+	/**
+	 * Removes all elements from the HashSet and frees the required memory.
+	 */
 	def clear()
+
+	/**
+	 * Removes all elements from the HashSet and allocates the internal
+	 * memory to fit new_expected_size elements.
+	 */
 	def clear(new_expected_size: Int)
 
+	/**
+	 * Checks if a HashSet contains o
+	 */
 	def contains(o: Long): Boolean
+
 	def iter: HashSetIterator
 	def iter(groupID: Int, groupSize: Int): HashSetIterator
 
