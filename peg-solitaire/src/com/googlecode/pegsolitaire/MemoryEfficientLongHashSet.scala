@@ -9,12 +9,16 @@ object MemoryEfficientLongHashSet {
  */
 class MemoryEfficientLongHashSet extends LongHashSet {
 
-	private val int_hash_set = new IntHashSet
+	// contains all numbers until Int.MaxValue (0x7fffffff)
+	private val int_hash_set_lower = new IntHashSet
+	// contains all numbers until 0xffffffff
+	private val int_hash_set_higher = new IntHashSet
+	// contains all numbers above 0xffffffff
 	private val long_hash_set = new StandardLongHashSet
 
-	override def size = int_hash_set.size + long_hash_set.size
+	override def size = int_hash_set_lower.size + int_hash_set_higher.size + long_hash_set.size
 
-	override def used = (int_hash_set.used + long_hash_set.used) / 2.0
+	override def used = (int_hash_set_lower.used + int_hash_set_higher.used + long_hash_set.used) / 3.0
 
 	
 	/**
@@ -26,14 +30,17 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 		require(groupSize > 0)
 		require(groupID < groupSize)
 
-		private val int_hash_set_iterator = int_hash_set.iter(groupID, groupSize)
+		private val int_hash_set_lower_iterator = int_hash_set_lower.iter(groupID, groupSize)
+		private val int_hash_set_higher_iterator = int_hash_set_higher.iter(groupID, groupSize)
 		private val long_hash_set_iterator = long_hash_set.iter(groupID, groupSize)
 
-		override def hasNext = int_hash_set_iterator.hasNext || long_hash_set_iterator.hasNext
+		override def hasNext = int_hash_set_lower_iterator.hasNext || int_hash_set_higher_iterator.hasNext || long_hash_set_iterator.hasNext
 
 		override def unsafe_next: Long = {
-			if(int_hash_set_iterator.hasNext)
-				int_hash_set_iterator.unsafe_next
+			if(int_hash_set_lower_iterator.hasNext)
+				int_hash_set_lower_iterator.unsafe_next
+			else if(int_hash_set_higher_iterator.hasNext)
+				int_hash_set_higher_iterator.unsafe_next.asInstanceOf[Long] | 0x80000000L
 			else
 				long_hash_set_iterator.unsafe_next
 		}
@@ -49,7 +56,8 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 	override def +=(c: LongHashSet) {
 		if(c.isInstanceOf[MemoryEfficientLongHashSet]) {
 			val other = c.asInstanceOf[MemoryEfficientLongHashSet]
-			int_hash_set += other.int_hash_set
+			int_hash_set_lower += other.int_hash_set_lower
+			int_hash_set_higher += other.int_hash_set_higher
 			long_hash_set += other.long_hash_set
 		} else {
 			c.foreach(this += _)
@@ -58,13 +66,16 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 
 	override def +=(e: Long) {
 		if(e <= Int.MaxValue)
-			int_hash_set += e.asInstanceOf[Int]
+			int_hash_set_lower += e.asInstanceOf[Int]
+		else if(e <= 0xffffffff)
+			int_hash_set_higher += (e & 0x7fffffff).asInstanceOf[Int]
 		else
 			long_hash_set += e
 	}
 
 	override def clear() {
-		int_hash_set.clear()
+		int_hash_set_lower.clear()
+		int_hash_set_higher.clear()
 		long_hash_set.clear()
 	}
 
@@ -74,7 +85,9 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 
 	override def contains(o: Long) = {
 		if(o <= Int.MaxValue)
-			int_hash_set.contains(o.asInstanceOf[Int])
+			int_hash_set_lower.contains(o.asInstanceOf[Int])
+		else if(o <= 0xffffffff)
+			int_hash_set_higher.contains((o & 0x7fffffff).asInstanceOf[Int])
 		else
 			long_hash_set.contains(o)
 	}
