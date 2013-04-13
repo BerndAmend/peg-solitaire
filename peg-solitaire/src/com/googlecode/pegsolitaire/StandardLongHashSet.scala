@@ -121,7 +121,7 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 	override def iter: HashSetIterator = new Iterator
 	override def iter(groupID: Int, groupSize: Int): HashSetIterator = new Iterator(groupID, groupSize)
 
-	override def ensureSizeFor(expectedSize: Int) {
+	private def ensureSizeFor(expectedSize: Int) {
 		if (table != null && table.length * 3 >= expectedSize * 4)
 			return
 

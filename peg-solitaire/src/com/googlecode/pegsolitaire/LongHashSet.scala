@@ -97,11 +97,6 @@ trait LongHashSet {
 	def iter: HashSetIterator
 	def iter(groupID: Int, groupSize: Int): HashSetIterator
 
-	/**
-	 * Ensures the set is large enough to contain the specified number of entries.
-	 */
-	def ensureSizeFor(expectedSize: Int)
-
 	def foreach(func: Long => Unit) {
 		val i = iter
 

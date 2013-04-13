@@ -83,11 +83,6 @@ class IntHashSet(t: Array[Int], s: Int) {
 		internal_addAll(c.table)
 	}
 
-	def +=(elements: Array[Int]) {
-		ensureSizeFor(_size + elements.length)
-		internal_addAll(elements)
-	}
-
 	def +=(e: Int) {
 		require(e != IntHashSet.INVALID_ELEMENT)
 		ensureSizeFor(_size + 1)
@@ -130,7 +125,7 @@ class IntHashSet(t: Array[Int], s: Int) {
 	def iter: Iterator = new Iterator
 	def iter(groupID: Int, groupSize: Int): Iterator = new Iterator(groupID, groupSize)
 
-	def ensureSizeFor(expectedSize: Int) {
+	private def ensureSizeFor(expectedSize: Int) {
 		if (table != null && table.length * 3 >= expectedSize * 4)
 			return
 
