@@ -345,7 +345,7 @@ object TUI {
 				println("Current field " + (solitaire.game.length - java.lang.Long.bitCount(f)) + "")
 				println(solitaire.game.toString(f))
 				println()
-				s = solitaire.getCompleteList(solitaire.getFollower(f)).toList
+				s = solitaire.getFollower(f).toList
 			}
 			println("Game is finished, press enter to restart or 'x' to exit")
 			readLine match {

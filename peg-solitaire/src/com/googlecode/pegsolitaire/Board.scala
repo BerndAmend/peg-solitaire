@@ -426,7 +426,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 
 	final def getNormalform(field: Long) = boardHelper.getNormalform(field)
 
-	final def addFollower(field: Long, sol: LongHashSet): Unit = applyMoves(field, field){n => sol += n}
+	final def addFollower(field: Long, sol: LongHashSet): Unit = applyMoves(field, field){sol += getNormalform(_)}
 
 	/**
 	 * return true if field has a follower/predecessor in the solutions HashSet
@@ -435,17 +435,18 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		var i = -1
 		while (i < movemask_size-1) {
 			i += 1
-			applyMove(field, field, i)(n => if(solutions.contains(n)) i=Int.MaxValue)
+			applyMove(field, field, i)(n => if(solutions.contains(getNormalform(n))) i=Int.MaxValue)
 		}
 		i == Int.MaxValue
 	}
 
 	/**
-	 * you may want to call getComplete list on the result
+	 * Returns a list of all related fields for the given field.
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
 		var result = LongHashSet.newInstance
-		applyMoves(field, field){n => if(searchSet.contains(n)) result += n}
+		// get all related fields
+		applyMoves(checkfield, field){n => if(searchSet.contains(getNormalform(n))) result += n}
 		result
 	}
 
@@ -466,7 +467,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		val mask = movemask(i)
 		val tmp = checkfield & mask
 		if (tmp == checkmask1(i) || tmp == checkmask2(i))
-			cmd(boardHelper.getNormalform(field ^ mask))
+			cmd(field ^ mask)
 	}
 
 	private final def applyMoves(checkfield: Long, field: Long)(cmd: Long => Unit) {

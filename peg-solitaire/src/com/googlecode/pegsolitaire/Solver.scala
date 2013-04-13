@@ -154,13 +154,10 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		}
 	}
 
-	protected def getCompleteList(solutionNumber: Int): LongHashSet = game.getCompleteList(solution(solutionNumber))
-	def getCompleteList(h: LongHashSet) = game.getCompleteList(h)
-
 	/**
 	 *  @return a list of all possible start-fields
 	 */
-	def getStart: LongHashSet = getCompleteList(getStartNum)
+	def getStart: LongHashSet = game.getCompleteList(solution(getStartNum))
 
 	/**
 	 * @return first non empty solution set id
@@ -180,7 +177,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	/**
 	 *  @return a list of all possible end-fields
 	 */
-	def getEnd: LongHashSet = getCompleteList(getEndNum)
+	def getEnd: LongHashSet = game.getCompleteList(solution(getEndNum))
 
 	/**
 	 * @return last non empty solution set id
@@ -214,7 +211,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	/**
 	 * @return all follower for a provided field
 	 */
-	def getPredecessorSet(field: Long): LongHashSet = {
+	def getPredecessor(field: Long): LongHashSet = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos - 1 <= 0)
 			return LongHashSet.newInstance
