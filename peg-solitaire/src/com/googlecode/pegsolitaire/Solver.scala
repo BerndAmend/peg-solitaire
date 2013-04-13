@@ -95,7 +95,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	/**
 	 *  solution(0) is unused
 	 */
-	val solution = Array.fill(game.length)(new LongHashSet)
+	val solution = Array.fill(game.length)(LongHashSet.newInstance)
 
 	/**
 	 * used to count in the ctor the dead ends
@@ -203,10 +203,10 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	def getFollower(field: Long): LongHashSet = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos + 1 >= game.length)
-			return new LongHashSet
+			return LongHashSet.newInstance
 		val next = solution(fieldPos + 1)
 		if (next == null)
-			return new LongHashSet
+			return LongHashSet.newInstance
 
 		game.getFollower(field, next)
 	}
@@ -217,7 +217,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 	def getPredecessorSet(field: Long): LongHashSet = {
 		val fieldPos = game.length - java.lang.Long.bitCount(field)
 		if (fieldPos - 1 <= 0)
-			return new LongHashSet
+			return LongHashSet.newInstance
 		game.getPredecessor(field, solution(fieldPos - 1))
 	}
 
@@ -256,7 +256,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 			threadID =>
 				future {
 					val iter = solution(sol - 1).iter(threadID, thread_count)
-					var result = if(thread_count == 1) solution(sol) else new LongHashSet()
+					var result = if(thread_count == 1) solution(sol) else LongHashSet.newInstance
 					while (iter.hasNext) {
 						game.addFollower(iter.unsafe_next, result)
 					}
@@ -279,7 +279,7 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 		val old_size= previous.size
 
 		@scala.annotation.tailrec
-		def loop(iter: LongHashSet#HashSetIterator, result: LongHashSet): LongHashSet = {
+		def loop(iter: HashSetIterator, result: LongHashSet): LongHashSet = {
 			if(iter.hasNext) {
 				val elem = iter.unsafe_next
 				if (game.hasFollower(elem, current))
@@ -291,12 +291,12 @@ class Solver(val game: Board, val observer: StatusObserver, threadcount: Int) {
 
 		if(thread_count > 1) {
 			val r = (0 until thread_count).map(
-					id => future(loop(previous.iter(id, thread_count), new LongHashSet))
+					id => future(loop(previous.iter(id, thread_count), LongHashSet.newInstance))
 			)
 			previous.clear( r.foldLeft(0)(_ + Await.result(_, Duration.Inf).size) )
 			r foreach (previous += Await.result(_, Duration.Inf))
 		} else {
-			val new_previous = new LongHashSet
+			val new_previous = LongHashSet.newInstance
 			loop(previous.iter, new_previous)
 			solution(pos - 1) = new_previous
 		}

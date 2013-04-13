@@ -270,7 +270,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		get_normalform append "var n = f\n\n"
 
 		get_equivalent_fields append "def getEquivalentFields(f: Long) = {\n"
-		get_equivalent_fields append "val n = new com.googlecode.pegsolitaire.LongHashSet(8)\n"
+		get_equivalent_fields append "val n = com.googlecode.pegsolitaire.LongHashSet.newInstance(8)\n"
 		get_equivalent_fields append "n += f\n\n"
 
 		if (is_transformation_valid(rotate180)) {
@@ -373,7 +373,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	}
 
 	lazy val possibleStartFields = {
-		val hashSet = new LongHashSet
+		val hashSet = LongHashSet.newInstance
 
 		val base = (1L << length) - 1L
 
@@ -444,7 +444,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	 * you may want to call getComplete list on the result
 	 */
 	private final def getRelatedFields(checkfield: Long, field: Long, searchSet: LongHashSet): LongHashSet = {
-		var result = new LongHashSet
+		var result = LongHashSet.newInstance
 		applyMoves(field, field){n => if(searchSet.contains(n)) result += n}
 		result
 	}
@@ -457,7 +457,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	 * @return a complete list with all equivalent fields for the fields HashSet
 	 */
 	def getCompleteList(fields: LongHashSet): LongHashSet = {
-		val output = new LongHashSet
+		val output = LongHashSet.newInstance
 		fields foreach (output += boardHelper.getEquivalentFields(_))
 		output
 	}
