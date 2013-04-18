@@ -1,11 +1,7 @@
 package com.googlecode.pegsolitaire
 
 object StandardLongHashSet {
-	def allocateTableMemory(size: Int) = {
-		val r = new Array[Long](size)
-		java.util.Arrays.fill(r, LongHashSet.INVALID_ELEMENT)
-		r
-	}
+	def allocateTableMemory(size: Int) = new Array[Long](size)
 }
 
 /**

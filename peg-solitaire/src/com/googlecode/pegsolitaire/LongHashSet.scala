@@ -32,7 +32,7 @@ object LongHashSet {
 	 */
 	val INITIAL_TABLE_SIZE = 1 << 5
 
-	val INVALID_ELEMENT = Long.MinValue
+	val INVALID_ELEMENT = 0
 
 	var use_standard_hash_set = false
 

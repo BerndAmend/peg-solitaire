@@ -1,13 +1,9 @@
 package com.googlecode.pegsolitaire
 
 object IntHashSet {
-	val INVALID_ELEMENT = Int.MinValue
+	val INVALID_ELEMENT = 0
 
-	def allocateTableMemory(size: Int) = {
-		val r = new Array[Int](size)
-		java.util.Arrays.fill(r, INVALID_ELEMENT)
-		r
-	}
+	def allocateTableMemory(size: Int) = new Array[Int](size)
 }
 
 /**
