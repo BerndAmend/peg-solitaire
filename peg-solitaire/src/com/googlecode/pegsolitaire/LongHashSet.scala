@@ -70,7 +70,11 @@ trait HashSetIterator {
 	def unsafe_next: Long
 }
 
-case class HashSetDepth(average: Double, max: Int, oneAccessPercent: Double) {
+trait HashSetDepthTrait {
+	def toString(): String
+}
+
+case class HashSetDepth(average: Double, max: Int, oneAccessPercent: Double) extends HashSetDepthTrait {
 	override def toString = "(HashSet accessDepth average=" + average + " max=" + max + " 1 access required=" + oneAccessPercent + ")"
 }
 
@@ -133,7 +137,7 @@ trait LongHashSet {
 	/**
 	 * @return the search deep required to access elements (average, max, oneAccessPercent)
 	 */
-	def depth: HashSetDepth
+	def depth: HashSetDepthTrait
 
 	def bitDistribution: Array[Long] = {
 		val it = iter

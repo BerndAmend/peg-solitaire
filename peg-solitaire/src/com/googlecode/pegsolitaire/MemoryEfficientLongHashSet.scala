@@ -104,8 +104,11 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 	override def iter: HashSetIterator = new Iterator
 	override def iter(groupID: Int, groupSize: Int): HashSetIterator = new Iterator(groupID, groupSize)
 
-	override def depth: HashSetDepth = {
-		HashSetDepth(0,0,0)
-		//long_hash_set.depth
+	class MemoryEfficientLongHashSetDepth extends HashSetDepthTrait {
+		override def toString = "int_hash_set_lower :" + int_hash_set_lower.depth + "\n" +
+								"int_hash_set_higher:" + int_hash_set_higher.depth + "\n" +
+								"long_hash_set      :" + long_hash_set.depth
 	}
+
+	override def depth: HashSetDepthTrait = new MemoryEfficientLongHashSetDepth
 }

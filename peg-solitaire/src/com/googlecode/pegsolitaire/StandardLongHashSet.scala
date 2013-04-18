@@ -179,33 +179,37 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 		h & table_length_minus_1
 	}
 
-	override def depth: HashSetDepth = {
-		var averageValue = BigDecimal(0)
-		var maxValue = 0
-		var oneAccessElements = 0
+	override def depth: HashSetDepthTrait = {
+		if(size == 0) {
+			HashSetDepth(0,0,0)
+		} else {
+			var averageValue = BigDecimal(0)
+			var maxValue = 0
+			var oneAccessElements = 0
 
-		var index = 0
-		val table_length = table.length
-		while (index < table_length) {
-			val v = table(index)
-			val designated_index = getIndex(v) // where the element should be
+			var index = 0
+			val table_length = table.length
+			while (index < table_length) {
+				val v = table(index)
+				val designated_index = getIndex(v) // where the element should be
 
-			if (v != LongHashSet.INVALID_ELEMENT) {
-				var d = 1
-				if (index == designated_index)
-					oneAccessElements += 1
-				else if (designated_index < index) {
-					d += index - designated_index
-				} else {
-					d += index + (table_length - designated_index)
+				if (v != LongHashSet.INVALID_ELEMENT) {
+					var d = 1
+					if (index == designated_index)
+						oneAccessElements += 1
+					else if (designated_index < index) {
+						d += index - designated_index
+					} else {
+						d += index + (table_length - designated_index)
+					}
+
+					maxValue = math.max(maxValue, d)
+					averageValue += d
 				}
-
-				maxValue = math.max(maxValue, d)
-				averageValue += d
+				index += 1
 			}
-			index += 1
-		}
 
-		HashSetDepth((averageValue / size).toDouble, maxValue, oneAccessElements.toDouble / size.toDouble)
+			HashSetDepth((averageValue / size).toDouble, maxValue, oneAccessElements.toDouble / size.toDouble)
+		}
 	}
 }
