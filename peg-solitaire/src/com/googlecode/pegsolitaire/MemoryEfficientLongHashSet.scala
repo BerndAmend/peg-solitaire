@@ -1,26 +1,26 @@
 package com.googlecode.pegsolitaire
 
-object MemoryEfficientLongHashSet {
-}
-
 /**
  * A memory-efficient hash set optimized for Longs
  * based on the java HashSet implementation by Google Inc.
  */
 class MemoryEfficientLongHashSet extends LongHashSet {
 
-	// contains all numbers until Int.MaxValue (0x7fffffff)
-	private val int_hash_set_lower = new IntHashSet
 	// contains all numbers until 0xffffffff
+	private val int_hash_set_lower = new IntHashSet
+	// contains all numbers until 0x1ffffffff
 	private val int_hash_set_higher = new IntHashSet
-	// contains all numbers above 0xffffffff
+	// contains all numbers above 0x1ffffffff
 	private val long_hash_set = new StandardLongHashSet
+
+	private var contains_bit_33_element = false
 
 	override def size = int_hash_set_lower.size + int_hash_set_higher.size + long_hash_set.size
 
 	override def used = (int_hash_set_lower.used + int_hash_set_higher.used + long_hash_set.used) / 3.0
 
-	
+	private final def convertIntToLong(i: Int): Long = if(i<0) (1L<<31 | (i & 0x7fffffff).asInstanceOf[Long]) else i.asInstanceOf[Long]
+
 	/**
 	 * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
 	 * e.g. to read multiple elements from a HashSet at a time without synchronization
@@ -38,14 +38,16 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 
 		override def unsafe_next: Long = {
 			if(int_hash_set_lower_iterator.hasNext)
-				int_hash_set_lower_iterator.unsafe_next
+				convertIntToLong(int_hash_set_lower_iterator.unsafe_next)
 			else if(int_hash_set_higher_iterator.hasNext)
-				int_hash_set_higher_iterator.unsafe_next.asInstanceOf[Long] | 0x80000000L
+				convertIntToLong(int_hash_set_higher_iterator.unsafe_next) | 0x100000000L
+			else if(contains_bit_33_element)
+				0x100000000L
 			else
 				long_hash_set_iterator.unsafe_next
 		}
 	}
-	
+
 	def this(expectedSize: Int) = this()
 
 	def this(c: LongHashSet) {
@@ -59,18 +61,34 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 			int_hash_set_lower += other.int_hash_set_lower
 			int_hash_set_higher += other.int_hash_set_higher
 			long_hash_set += other.long_hash_set
+			contains_bit_33_element = contains_bit_33_element || other.contains_bit_33_element
 		} else {
 			c.foreach(this += _)
 		}
 	}
 
 	override def +=(o: Long) {
-		if(o <= Int.MaxValue)
+		if(o <= 0xffffffffL)
 			int_hash_set_lower += o.asInstanceOf[Int]
-		else if(o <= 0xffffffff)
-			int_hash_set_higher += (o & 0x7fffffff).asInstanceOf[Int]
-		else
+		else if(o <= 0x1ffffffffL) {
+			if(o == 0x100000000L)
+				contains_bit_33_element = true
+			else
+				int_hash_set_higher += (o & 0xffffffffL).asInstanceOf[Int]
+		} else
 			long_hash_set += o
+	}
+
+	override def contains(o: Long) = {
+		if(o <= 0xffffffffL)
+			int_hash_set_lower.contains(o.asInstanceOf[Int])
+		else if(o <= 0x1ffffffffL) {
+			if(o == 0x100000000L)
+				contains_bit_33_element
+			else
+				int_hash_set_higher.contains((o & 0xffffffffL).asInstanceOf[Int])
+		} else
+			long_hash_set.contains(o)
 	}
 
 	override def clear() {
@@ -81,15 +99,6 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 
 	override def clear(new_expected_size: Int) {
 		clear()
-	}
-
-	override def contains(o: Long) = {
-		if(o <= Int.MaxValue)
-			int_hash_set_lower.contains(o.asInstanceOf[Int])
-		else if(o <= 0xffffffff)
-			int_hash_set_higher.contains((o & 0x7fffffff).asInstanceOf[Int])
-		else
-			long_hash_set.contains(o)
 	}
 
 	override def iter: HashSetIterator = new Iterator
