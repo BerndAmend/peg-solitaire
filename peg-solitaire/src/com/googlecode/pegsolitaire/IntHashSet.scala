@@ -166,7 +166,7 @@ class IntHashSet(t: Array[Int], s: Int) {
 			if (existing == IntHashSet.INVALID_ELEMENT || o == existing)
 				index
 			else
-				loop((index + 1) % table.length)
+				loop((index + 1) & table_length_minus_1)
 		}
 
 		loop(getIndex(o))
