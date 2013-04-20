@@ -78,18 +78,7 @@ case class HashSetDepth(average: Double, max: Int, oneAccessPercent: Double) ext
 	override def toString = "(HashSet accessDepth average=" + average + " max=" + max + " 1 access required=" + oneAccessPercent + ")"
 }
 
-trait LongHashSet {
-
-	/**
-	 * number of elements inside the set
-	 */
-	def size: Int
-
-	/**
-	 * current fill state in percent
-	 */
-	def used: Double
-	def isEmpty = size == 0
+trait LongHashSet extends HashSet {
 
 	/**
 	 * Add all elements from the LongHashSet c to the current instance.
@@ -103,17 +92,6 @@ trait LongHashSet {
 	 * If e == LongHashSet.INVALID_ELEMENT an exception is thrown.
 	 */
 	def +=(o: Long)
-
-	/**
-	 * Removes all elements from the HashSet and frees the required memory.
-	 */
-	def clear()
-
-	/**
-	 * Removes all elements from the HashSet and allocates the internal
-	 * memory to fit new_expected_size elements.
-	 */
-	def clear(new_expected_size: Int)
 
 	/**
 	 * Checks if a HashSet contains o
@@ -135,11 +113,6 @@ trait LongHashSet {
 		foreach(r ::= _)
 		r
 	}
-
-	/**
-	 * @return the search deep required to access elements (average, max, oneAccessPercent)
-	 */
-	def depth: HashSetDepthTrait
 
 	def bitDistribution: Array[Long] = {
 		val it = iter

@@ -10,14 +10,9 @@ object IntHashSet {
  * A memory-efficient hash set optimized for Longs
  * based on the java HashSet implementation by Google Inc.
  */
-class IntHashSet(t: Array[Int], s: Int) {
+class IntHashSet(t: Array[Int], s: Int) extends HashSet {
 
-	protected var _size = s
-
-	def size = _size
-	def table_size = table.size
-
-	def used = if (table == null) 1.0 else (_size.toDouble / table.length.toDouble)
+	def table_size = if(table == null) 0 else table.size
 
 	private var table = t
 	private var table_length_minus_1 = if (t == null) 0 else (t.length - 1)
@@ -63,11 +58,9 @@ class IntHashSet(t: Array[Int], s: Int) {
 
 	def this() = this(IntHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), 0)
 
-	def this(expectedSize: Int) {
-		this(null, 0)
-		require(expectedSize >= 0)
-		ensureSizeFor(expectedSize)
-	}
+	def this(expectedSize: Int) = this(
+									IntHashSet.allocateTableMemory(
+											HashSet.computeCapacityForSize(expectedSize, LongHashSet.INITIAL_TABLE_SIZE)), 0)
 
 	def this(c: IntHashSet) {
 		this(c.size)
@@ -127,23 +120,17 @@ class IntHashSet(t: Array[Int], s: Int) {
 	def iter(groupID: Int, groupSize: Int): Iterator = new Iterator(groupID, groupSize)
 
 	private def ensureSizeFor(expectedSize: Int) {
-		if (table != null && table.length * 3 >= expectedSize * 4)
+		if (HashSet.sizeFitsIntoCapacity(expectedSize, table.size))
 			return
-
-		// calculate table size
-		var newCapacity = if (table == null) 1 else table.length
-
-		while (newCapacity * 3 < expectedSize * 4)
-			newCapacity <<= 1
 
 		val old_table = table
 		val old_size = _size
-		table = IntHashSet.allocateTableMemory(newCapacity)
+		table = IntHashSet.allocateTableMemory(HashSet.computeCapacityForSize(expectedSize, table.size))
 		table_length_minus_1 = table.length - 1
 		_size = 0
 		if (old_size != 0)
 			internal_addAll(old_table)
-		require(_size == old_size)
+		require(size == old_size)
 	}
 
 	/**

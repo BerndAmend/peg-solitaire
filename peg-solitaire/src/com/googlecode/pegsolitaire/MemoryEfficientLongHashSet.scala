@@ -1,3 +1,19 @@
+/**
+ * Peg Solitaire
+ * Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 3 as
+ *  published by the Free Software Foundation.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.googlecode.pegsolitaire
 
 /**
@@ -5,6 +21,10 @@ package com.googlecode.pegsolitaire
  * based on the java HashSet implementation by Google Inc.
  */
 class MemoryEfficientLongHashSet extends LongHashSet {
+
+	override def table_size = 	int_hash_set_lower.table_size +
+								int_hash_set_higher.table_size +
+								long_hash_set.table_size
 
 	// contains all numbers until 0xffffffff
 	private val int_hash_set_lower = new IntHashSet

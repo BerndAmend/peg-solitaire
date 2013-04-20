@@ -1,3 +1,19 @@
+/**
+ * Peg Solitaire
+ * Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 3 as
+ *  published by the Free Software Foundation.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.googlecode.pegsolitaire
 
 object StandardLongHashSet {
@@ -10,12 +26,7 @@ object StandardLongHashSet {
  */
 class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 
-	protected var _size = s
-
-	override def size = _size
-	def table_size = table.size
-
-	override def used = if (table == null) 1.0 else (_size.toDouble / table.length.toDouble)
+	def table_size = if(table == null) 0 else table.size
 
 	private var table = t
 	private var table_length_minus_1 = if (t == null) 0 else (t.length - 1)
@@ -55,11 +66,10 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 
 	def this() = this(StandardLongHashSet.allocateTableMemory(LongHashSet.INITIAL_TABLE_SIZE), 0)
 
-	def this(expectedSize: Int) {
-		this(null, 0)
-		require(expectedSize >= 0)
-		ensureSizeFor(expectedSize)
-	}
+	def this(expectedSize: Int) = this(
+									StandardLongHashSet.allocateTableMemory(
+											HashSet.computeCapacityForSize(expectedSize, LongHashSet.INITIAL_TABLE_SIZE)), 0)
+
 
 	def this(c: LongHashSet) {
 		this(c.size)
@@ -123,18 +133,12 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 	override def iter(groupID: Int, groupSize: Int): HashSetIterator = new Iterator(groupID, groupSize)
 
 	private def ensureSizeFor(expectedSize: Int) {
-		if (table != null && table.length * 3 >= expectedSize * 4)
+		if (HashSet.sizeFitsIntoCapacity(expectedSize, table.length))
 			return
-
-		// calculate table size
-		var newCapacity = if (table == null) 1 else table.length
-
-		while (newCapacity * 3 < expectedSize * 4)
-			newCapacity <<= 1
 
 		val old_table = table
 		val old_size = _size
-		table = StandardLongHashSet.allocateTableMemory(newCapacity)
+		table = StandardLongHashSet.allocateTableMemory(HashSet.computeCapacityForSize(expectedSize, table.size))
 		table_length_minus_1 = table.length - 1
 		_size = 0
 		if (old_size != 0)
