@@ -96,6 +96,8 @@ trait LongHashSet {
 	 */
 	def +=(c: LongHashSet)
 
+	def +=(c: Array[Long])
+
 	/**
 	 * Add the element e to the HashSet.
 	 * If e == LongHashSet.INVALID_ELEMENT an exception is thrown.

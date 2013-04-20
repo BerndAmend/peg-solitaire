@@ -36,7 +36,7 @@ trait BoardHelper {
 	/**
 	 * @return all fields which are equal the provided field
 	 */
-	def getEquivalentFields(field: Long): LongHashSet
+	def getEquivalentFields(field: Long): Array[Long]
 }
 
 /**
@@ -270,15 +270,15 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 		get_normalform append "var n = f\n\n"
 
 		get_equivalent_fields append "def getEquivalentFields(f: Long) = {\n"
-		get_equivalent_fields append "val n = com.googlecode.pegsolitaire.LongHashSet.newInstance(8)\n"
-		get_equivalent_fields append "n += f\n\n"
+		get_equivalent_fields append "val n = new Array[Long](8)\n"
+		get_equivalent_fields append "n(0) = f\n\n"
 
 		if (is_transformation_valid(rotate180)) {
 			val c_rotate180 = generateCode(rotate180(lookUpTable))
 			get_normalform append "val n180 = " + c_rotate180 + "\n"
 			get_normalform append "if(n180 < n) n = n180\n\n"
 
-			get_equivalent_fields append "n += " + c_rotate180 + "\n"
+			get_equivalent_fields append "n(1) = " + c_rotate180 + "\n"
 		}
 
 		if (is_transformation_valid(rotate90)) {
@@ -286,7 +286,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val n90 = " + c_rotate90 + "\n"
 			get_normalform append "if(n90 < n) n = n90\n\n"
 
-			get_equivalent_fields append "n += " + c_rotate90 + "\n"
+			get_equivalent_fields append "n(2) = " + c_rotate90 + "\n"
 		}
 
 		if (is_transformation_valid(rotate270)) {
@@ -294,7 +294,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val n270 = " + c_rotate270 + "\n"
 			get_normalform append "if(n270 < n) n = n270\n\n"
 
-			get_equivalent_fields append "n += " + c_rotate270 + "\n"
+			get_equivalent_fields append "n(3) = " + c_rotate270 + "\n"
 		}
 
 		if (is_transformation_valid(vflip)) {
@@ -302,7 +302,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val v = " + c_vflip + "\n"
 			get_normalform append "if(v < n) n = v\n\n"
 
-			get_equivalent_fields append "n += " + c_vflip + "\n"
+			get_equivalent_fields append "n(4) = " + c_vflip + "\n"
 		}
 
 		if (is_transformation_valid(hflip)) {
@@ -310,7 +310,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val h = " + c_hflip + "\n"
 			get_normalform append "if(h < n) n = h\n\n"
 
-			get_equivalent_fields append "n += " + c_hflip + "\n"
+			get_equivalent_fields append "n(5) = " + c_hflip + "\n"
 		}
 
 		if (is_transformation_valid(vflip_rotate90)) {
@@ -318,7 +318,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val v90 = " + c_v90 + "\n"
 			get_normalform append "if(v90 < n) n = v90\n\n"
 
-			get_equivalent_fields append "n += " + c_v90 + "\n"
+			get_equivalent_fields append "n(6) = " + c_v90 + "\n"
 		}
 
 		if (is_transformation_valid(hflip_rotate90)) {
@@ -326,7 +326,7 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 			get_normalform append "val h90 = " + c_h90 + "\n"
 			get_normalform append "if(h90 < n) n = h90\n\n"
 
-			get_equivalent_fields append "n += " + c_h90 + "\n"
+			get_equivalent_fields append "n(7) = " + c_h90 + "\n"
 		}
 
 		get_normalform append "n\n"
@@ -365,10 +365,10 @@ final class Board(val boardDescription: String, val moveDirections: Array[MoveDi
 	{	// verify that the BoardHelper ist correct
 		for(mask <- movemask) {
 			// check if all getEquivalentFields are valid moves
-			boardHelper.getEquivalentFields(mask) foreach (v => require(movemask.contains(v)))
+			boardHelper.getEquivalentFields(mask).filter(_ != LongHashSet.INVALID_ELEMENT) foreach (v => require(movemask.contains(v)))
 
 			// check if the mask is in the getEquivalentFields list
-			require(boardHelper.getEquivalentFields(mask).contains(mask))
+			require(boardHelper.getEquivalentFields(mask).filter(_ != LongHashSet.INVALID_ELEMENT).contains(mask))
 		}
 	}
 

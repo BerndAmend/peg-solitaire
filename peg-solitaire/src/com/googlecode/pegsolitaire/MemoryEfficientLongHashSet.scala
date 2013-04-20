@@ -67,6 +67,8 @@ class MemoryEfficientLongHashSet extends LongHashSet {
 		}
 	}
 
+	override def +=(c: Array[Long]): Unit = c.foreach(this += _)
+
 	override def +=(o: Long) {
 		if(o <= 0xffffffffL)
 			int_hash_set_lower += o.asInstanceOf[Int]

@@ -75,6 +75,11 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 		}
 	}
 
+	def +=(c: Array[Long]) {
+		ensureSizeFor(_size + c.length)
+		internal_addAll(c)
+	}
+
 	override def +=(o: Long) {
 		require(o != LongHashSet.INVALID_ELEMENT)
 		ensureSizeFor(_size + 1)

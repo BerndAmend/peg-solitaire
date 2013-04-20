@@ -79,6 +79,11 @@ class IntHashSet(t: Array[Int], s: Int) {
 		internal_addAll(c.table)
 	}
 
+	def +=(c: Array[Int]) {
+		ensureSizeFor(_size + c.length)
+		internal_addAll(c)
+	}
+
 	def +=(o: Int) {
 		require(o != IntHashSet.INVALID_ELEMENT)
 		ensureSizeFor(_size + 1)
