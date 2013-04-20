@@ -53,7 +53,7 @@ object TUI {
 
 	def main(args: Array[String]) {
 		System.nanoTime()
-		println("Peg Solitaire v6\n" +
+		println("Peg Solitaire v7\n" +
 			"  Copyright (C) 2010-2013 Bernd Amend <berndamend+pegsolitaire@googlemail.com>\n" +
 			"  This program is free software: you can redistribute it and/or modify\n" +
 			"  it under the terms of the GNU General Public License version 3 as published by\n" +
