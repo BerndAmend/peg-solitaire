@@ -69,9 +69,9 @@ object TUI {
 			"                        by default you have to select the start and end field(s)\n" +
 			"  -count               count the number of ways to a solution (this may take a while!!!)\n" +
 			"  -color               enable colored text output\n" +
-			"  -thread-count        number of threads that should be used (default 0 = auto)\n" +
+			"  -threads             number of threads that should be used (default 0 = auto)\n" +
 			"  -debug               enable debug output\n\n" +
-			"  To reduce memory usage try \"-thread-count 1\"")
+			"  To reduce memory usage try \"-threads 1\"")
 
 		val observer = new ConsolenStatusObserver
 
@@ -100,17 +100,17 @@ object TUI {
 				case "-count" => arg_count = true
 				case "-color" => Helper.enableColor = true
 				case "-debug" => Helper.enableDebug = true
-				case "-thread-count" =>
-					i += checkForArguments("-thread-count")
+				case "-threads" =>
+					i += checkForArguments("-threads")
 					try {
 						thread_count = args(i).toInt
 						if (thread_count < 0) {
-							printlnError("error: negative arguments for -thread-count are not allowed, exit")
+							printlnError("error: negative arguments for -threads are not allowed, exit")
 							return
 						}
 					} catch {
 						case _ : NumberFormatException =>
-							printlnError("error: invalid argument for -thread-count, exit")
+							printlnError("error: invalid argument for -threads, exit")
 							return
 					}
 				case s =>
