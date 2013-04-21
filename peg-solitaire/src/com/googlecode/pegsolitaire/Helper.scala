@@ -89,7 +89,12 @@ object Helper {
 		while (true) {
 			print(msg + " ")
 			Console.flush
-			readLine.toLowerCase match {
+			val input = readLine
+			if(input == null) {
+				println("Bye, bye")
+				sys.exit(0)
+			}
+			input.toLowerCase match {
 				case "y" => return true
 				case "yes" => return true
 				case "n" => return false

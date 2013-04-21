@@ -278,7 +278,7 @@ object TUI {
 			print("(x to abort) > ")
 			Console.flush
 			val input = readLine()
-			if (input.toLowerCase == "x") {
+			if (input == null || input.toLowerCase == "x") {
 				println("Bye, bye")
 				sys.exit(0)
 			}
@@ -308,7 +308,7 @@ object TUI {
 			print("(x to abort) > ")
 			Console.flush
 			val input = readLine()
-			if (input.toLowerCase == "x") {
+			if (input == null || input.toLowerCase == "x") {
 				println("Bye, bye")
 				sys.exit(0)
 			}
