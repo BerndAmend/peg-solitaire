@@ -29,7 +29,7 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 	def table_size = if(table == null) 0 else table.size
 
 	private var table = t
-	private var table_length_minus_1 = if (t == null) 0 else (t.length - 1)
+	table_length_minus_1 = if (table == null) 0 else (table.length - 1)
 
 	/**
 	 * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
@@ -174,19 +174,10 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 				loop((index + 1) & table_length_minus_1)
 		}
 
-		loop(getIndex(o))
+		loop(getIndexFromLong(o))
 	}
 
-	private def getIndex(value: Long): Int = {
-		var h = (value ^ (value >>> 32)).asInstanceOf[Int] // hashCode
-		// Copied from Apache's AbstractHashedMap; prevents power-of-two collisions.
-		h += ~(h << 9)
-		h ^= (h >>> 14)
-		h += (h << 4)
-		h ^= (h >>> 10)
-		// Power of two trick.
-		h & table_length_minus_1
-	}
+	private def getIndexFromLong(value: Long): Int = getIndex((value ^ (value >>> 32)).asInstanceOf[Int])
 
 	override def depth: HashSetDepthTrait = {
 		if(size == 0) {
@@ -200,7 +191,7 @@ class StandardLongHashSet(t: Array[Long], s: Int) extends LongHashSet {
 			val table_length = table.length
 			while (index < table_length) {
 				val v = table(index)
-				val designated_index = getIndex(v) // where the element should be
+				val designated_index = getIndexFromLong(v) // where the element should be
 
 				if (v != LongHashSet.INVALID_ELEMENT) {
 					var d = 1

@@ -32,18 +32,19 @@ trait HashSet {
 
 	def size = _size
 	def table_size: Int
+	protected var table_length_minus_1 = 0
 	
 	/**
 	 * current fill state in percent
 	 */
 	def used = if (table_size == 0) 1.0 else (size.toDouble / table_size.toDouble)
 	def isEmpty = size == 0
-	
+
 	/**
 	 * @return the search deep required to access elements (average, max, oneAccessPercent)
 	 */
 	def depth: HashSetDepthTrait
-	
+
 	/**
 	 * Removes all elements from the HashSet and frees the required memory.
 	 */
@@ -54,4 +55,15 @@ trait HashSet {
 	 * memory to fit new_expected_size elements.
 	 */
 	def clear(new_expected_size: Int)
+
+	final def getIndex(value: Int): Int = {
+		var h = value
+		// Copied from Apache's AbstractHashedMap; prevents power-of-two collisions.
+		h += ~(h << 9)
+		h ^= (h >>> 14)
+		h += (h << 4)
+		h ^= (h >>> 10)
+		// Power of two trick.
+		h & table_length_minus_1
+	}
 }

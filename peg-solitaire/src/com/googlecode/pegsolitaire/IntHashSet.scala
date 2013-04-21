@@ -15,7 +15,8 @@ class IntHashSet(t: Array[Int], s: Int) extends HashSet {
 	def table_size = if(table == null) 0 else table.size
 
 	private var table = t
-	private var table_length_minus_1 = if (t == null) 0 else (t.length - 1)
+
+	table_length_minus_1 = if (table == null) 0 else (table.length - 1)
 
 	/**
 	 * positions can be used to create a HashSetIterator that only work on a subset of the HashSet
@@ -162,17 +163,6 @@ class IntHashSet(t: Array[Int], s: Int) extends HashSet {
 		}
 
 		loop(getIndex(o))
-	}
-
-	private def getIndex(value: Int): Int = {
-		var h = value
-		// Copied from Apache's AbstractHashedMap; prevents power-of-two collisions.
-		h += ~(h << 9)
-		h ^= (h >>> 14)
-		h += (h << 4)
-		h ^= (h >>> 10)
-		// Power of two trick.
-		h & table_length_minus_1
 	}
 
 	def depth: HashSetDepthTrait = {
